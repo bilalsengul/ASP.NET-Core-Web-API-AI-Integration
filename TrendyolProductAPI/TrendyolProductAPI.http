@@ -1,0 +1,6 @@
+@TrendyolProductAPI_HostAddress = http://localhost:5121
+
+GET {{TrendyolProductAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
