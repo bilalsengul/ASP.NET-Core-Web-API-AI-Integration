@@ -26,6 +26,13 @@ namespace TrendyolProductAPI.Middleware
             var appSettings = context.RequestServices.GetRequiredService<IConfiguration>();
             var apiKey = appSettings.GetValue<string>("ApiKey");
 
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteAsync("API Key is not configured");
+                return;
+            }
+
             if (!apiKey.Equals(extractedApiKey))
             {
                 context.Response.StatusCode = 401;

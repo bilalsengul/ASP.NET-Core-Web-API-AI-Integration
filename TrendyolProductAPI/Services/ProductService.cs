@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OpenAI_API;
 using TrendyolProductAPI.Models;
+using TrendyolProductAPI.Extensions;
 using HtmlAgilityPack;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -160,19 +161,25 @@ namespace TrendyolProductAPI.Services
 
         public async Task<List<Product>> GetAllProductsAsync()
         {
+            // Get all cached products
             var products = new List<Product>();
-            // In a real implementation, you would retrieve this from a database
-            // For now, we'll just return what's in the cache
+            var cacheKeys = _cache.GetKeys<string>().Where(k => k.StartsWith(CACHE_KEY_PREFIX));
+            
+            foreach (var key in cacheKeys)
+            {
+                if (_cache.TryGetValue(key, out Product? product) && product != null)
+                {
+                    products.Add(product);
+                }
+            }
+            
             return products;
         }
 
-        public async Task<Product> GetProductBySkuAsync(string sku)
+        public Task<Product?> GetProductBySkuAsync(string sku)
         {
-            if (_cache.TryGetValue($"{CACHE_KEY_PREFIX}{sku}", out Product product))
-            {
-                return product;
-            }
-            return null;
+            _cache.TryGetValue($"{CACHE_KEY_PREFIX}{sku}", out Product? product);
+            return Task.FromResult(product);
         }
 
         private string ExtractValue(string response, string key)
