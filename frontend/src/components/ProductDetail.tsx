@@ -34,7 +34,7 @@ const ProductDetail: React.FC = () => {
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [transforming, setTransforming] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<Product | null>(null);
@@ -50,10 +50,10 @@ const ProductDetail: React.FC = () => {
         if (data.variants && data.variants.length > 0) {
           setSelectedVariant(data.variants[0]);
         }
-        setError(null);
+        setErrorMessage(null);
       } catch (error: unknown) {
         console.error('Error fetching product:', error);
-        setError('Failed to fetch product details. Please try again later.');
+        setErrorMessage('Failed to fetch product details. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -66,14 +66,14 @@ const ProductDetail: React.FC = () => {
     if (!sku) return;
     
     setTransforming(true);
-    setError(null);
+    setErrorMessage(null);
 
     try {
       const transformedProduct = await transformProduct(sku);
       setProduct(transformedProduct);
     } catch (error: unknown) {
       console.error('Error transforming product:', error);
-      setError('Failed to transform product. Please try again later.');
+      setErrorMessage('Failed to transform product. Please try again later.');
     } finally {
       setTransforming(false);
     }
@@ -88,7 +88,7 @@ const ProductDetail: React.FC = () => {
       navigate('/', { replace: true });
     } catch (error: unknown) {
       console.error('Error saving product:', error);
-      setError('Failed to save product. Please try again later.');
+      setErrorMessage('Failed to save product. Please try again later.');
     } finally {
       setSaving(false);
     }
@@ -126,13 +126,30 @@ const ProductDetail: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
+      {errorMessage && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {errorMessage}
+        </Alert>
+      )}
+
       <Breadcrumbs 
         separator={<NavigateNextIcon fontSize="small" />} 
         sx={{ mb: 2 }}
       >
-        <Link color="inherit" href="/">Home</Link>
-        <Link color="inherit" href="#">{product?.category || 'Category'}</Link>
-        <Typography color="text.primary">{product?.name}</Typography>
+        <Link color="inherit" href="/" sx={{ textDecoration: 'none' }}>
+          Trendyol
+        </Link>
+        {product.category?.split('>').map((cat, index) => (
+          <Link 
+            key={index} 
+            color="inherit" 
+            href="#"
+            sx={{ textDecoration: 'none' }}
+          >
+            {cat.trim()}
+          </Link>
+        ))}
+        <Typography color="text.primary">{product.name}</Typography>
       </Breadcrumbs>
 
       <Paper elevation={0} sx={{ p: 3, backgroundColor: 'transparent' }}>
@@ -213,7 +230,7 @@ const ProductDetail: React.FC = () => {
                 {reviewCount && (
                   <Stack direction="row" alignItems="center" spacing={1}>
                     <Rating 
-                      value={3.7} 
+                      value={5.0} 
                       precision={0.1} 
                       readOnly 
                       size="small"
