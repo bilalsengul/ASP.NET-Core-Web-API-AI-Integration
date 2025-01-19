@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "p1k1AAyQuWfUrmGcr21zOUlhQxBxK2nS1D4pDV9DmF1/d8cCGwRlad/1CwiKVub/WJnZWY/ygpwD+XTesqLKEQ==",
+  "dgSpecHash": "HNi4Y/YOHPQ=",
   "success": true,
   "projectFilePath": "/Users/bilalsengul/Desktop/CURSOR/Case U/ASP.NET-Core-Web-API---AI-Integration/TrendyolProductAPI/TrendyolProductAPI.csproj",
   "expectedPackageFiles": [
     "/Users/bilalsengul/.nuget/packages/htmlagilitypack/1.11.54/htmlagilitypack.1.11.54.nupkg.sha512",
-    "/Users/bilalsengul/.nuget/packages/microsoft.aspnetcore.openapi/8.0.0/microsoft.aspnetcore.openapi.8.0.0.nupkg.sha512",
+    "/Users/bilalsengul/.nuget/packages/microsoft.aspnetcore.openapi/9.0.0/microsoft.aspnetcore.openapi.9.0.0.nupkg.sha512",
     "/Users/bilalsengul/.nuget/packages/microsoft.bcl.asyncinterfaces/1.1.1/microsoft.bcl.asyncinterfaces.1.1.1.nupkg.sha512",
     "/Users/bilalsengul/.nuget/packages/microsoft.extensions.apidescription.server/6.0.5/microsoft.extensions.apidescription.server.6.0.5.nupkg.sha512",
     "/Users/bilalsengul/.nuget/packages/microsoft.extensions.configuration/2.1.0/microsoft.extensions.configuration.2.1.0.nupkg.sha512",
@@ -17,7 +17,7 @@
     "/Users/bilalsengul/.nuget/packages/microsoft.extensions.logging.abstractions/2.1.0/microsoft.extensions.logging.abstractions.2.1.0.nupkg.sha512",
     "/Users/bilalsengul/.nuget/packages/microsoft.extensions.options/2.1.0/microsoft.extensions.options.2.1.0.nupkg.sha512",
     "/Users/bilalsengul/.nuget/packages/microsoft.extensions.primitives/2.1.0/microsoft.extensions.primitives.2.1.0.nupkg.sha512",
-    "/Users/bilalsengul/.nuget/packages/microsoft.openapi/1.4.3/microsoft.openapi.1.4.3.nupkg.sha512",
+    "/Users/bilalsengul/.nuget/packages/microsoft.openapi/1.6.17/microsoft.openapi.1.6.17.nupkg.sha512",
     "/Users/bilalsengul/.nuget/packages/newtonsoft.json/13.0.3/newtonsoft.json.13.0.3.nupkg.sha512",
     "/Users/bilalsengul/.nuget/packages/openai/1.10.0/openai.1.10.0.nupkg.sha512",
     "/Users/bilalsengul/.nuget/packages/swashbuckle.aspnetcore/6.5.0/swashbuckle.aspnetcore.6.5.0.nupkg.sha512",
