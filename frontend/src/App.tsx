@@ -1,35 +1,46 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { AppBar, Toolbar, Typography, Container, Button, Box, CssBaseline } from '@mui/material';
+import ProductList from './components/ProductList';
+import ProductDetail from './components/ProductDetail';
+import CrawlProduct from './components/CrawlProduct';
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <Router>
+      <CssBaseline />
+      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <AppBar position="static">
+          <Toolbar>
+            <Typography variant="h6" component={Link} to="/" sx={{ flexGrow: 1, textDecoration: 'none', color: 'inherit' }}>
+              Trendyol Product Manager
+            </Typography>
+            <Button color="inherit" component={Link} to="/">
+              Products
+            </Button>
+            <Button color="inherit" component={Link} to="/crawl">
+              Crawl New
+            </Button>
+          </Toolbar>
+        </AppBar>
+
+        <Container component="main" sx={{ flexGrow: 1, py: 3 }}>
+          <Routes>
+            <Route path="/" element={<ProductList />} />
+            <Route path="/product/:sku" element={<ProductDetail />} />
+            <Route path="/crawl" element={<CrawlProduct />} />
+          </Routes>
+        </Container>
+
+        <Box component="footer" sx={{ py: 3, px: 2, mt: 'auto', backgroundColor: (theme) => theme.palette.grey[200] }}>
+          <Container maxWidth="sm">
+            <Typography variant="body2" color="text.secondary" align="center">
+              © {new Date().getFullYear()} Trendyol Product Manager. All rights reserved.
+            </Typography>
+          </Container>
+        </Box>
+      </Box>
+    </Router>
+  );
 }
 
-export default App
+export default App;
