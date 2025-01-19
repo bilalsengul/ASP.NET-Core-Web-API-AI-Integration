@@ -5,14 +5,21 @@ import {
   Container,
   Typography,
   Box,
-  CircularProgress,
-  Paper,
-  Grid,
   Button,
+  CircularProgress,
+  Alert,
+  Paper,
+  Stack,
   Chip,
+  Rating,
   Divider,
-  Stack
+  Grid
 } from '@mui/material';
+import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import DescriptionIcon from '@mui/icons-material/Description';
+import SaveIcon from '@mui/icons-material/Save';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 
 const ProductDetail: React.FC = () => {
   const { sku } = useParams<{ sku: string }>();
@@ -46,10 +53,11 @@ const ProductDetail: React.FC = () => {
     if (!sku) return;
     
     setTransforming(true);
+    setError(null);
+
     try {
       const transformedProduct = await transformProduct(sku);
       setProduct(transformedProduct);
-      setError(null);
     } catch (error: unknown) {
       console.error('Error transforming product:', error);
       setError('Failed to transform product. Please try again later.');
@@ -64,8 +72,6 @@ const ProductDetail: React.FC = () => {
     setSaving(true);
     try {
       await saveProduct(product);
-      setError(null);
-      // Navigate to products list after saving
       navigate('/', { replace: true });
     } catch (error: unknown) {
       console.error('Error saving product:', error);
@@ -83,112 +89,177 @@ const ProductDetail: React.FC = () => {
     );
   }
 
-  if (error) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-        <Typography color="error">{error}</Typography>
-      </Box>
-    );
-  }
-
   if (!product) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-        <Typography>Product not found</Typography>
-      </Box>
+      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="error">Product not found</Alert>
+      </Container>
     );
   }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Paper elevation={3} sx={{ p: 3 }}>
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Box display="flex" justifyContent="space-between" alignItems="center">
-              <Typography variant="h4" component="h1" gutterBottom>
-                {product.name}
-              </Typography>
-              <Stack direction="row" spacing={2}>
-                {product.score === null ? (
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleTransform}
-                    disabled={transforming}
-                  >
-                    {transforming ? 'Transforming...' : 'Transform Product'}
-                  </Button>
-                ) : (
-                  <Button
-                    variant="contained"
-                    color="success"
-                    onClick={handleSave}
-                    disabled={saving}
-                  >
-                    {saving ? 'Saving...' : 'Save Product'}
-                  </Button>
-                )}
-              </Stack>
-            </Box>
-          </Grid>
-
-          <Grid item xs={12}>
-            <Divider />
-          </Grid>
-
-          <Grid item xs={12} md={8}>
-            <Typography variant="h6" gutterBottom>Description</Typography>
-            <Typography paragraph>
-              {product.description || 'No description available'}
+      <Paper elevation={0} sx={{ p: 4, backgroundColor: 'transparent' }}>
+        <Stack spacing={3}>
+          <Box>
+            <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+              Product Details
             </Typography>
+            <Typography variant="subtitle1" color="text.secondary">
+              View and manage product information
+            </Typography>
+          </Box>
 
-            <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Details</Typography>
-            <Box sx={{ mb: 2 }}>
-              <Typography><strong>Brand:</strong> {product.brand}</Typography>
-              <Typography><strong>SKU:</strong> {product.sku}</Typography>
-              <Typography><strong>Category:</strong> {product.category || 'Uncategorized'}</Typography>
-            </Box>
+          {error && (
+            <Alert 
+              severity="error" 
+              sx={{ 
+                borderRadius: 2,
+                '& .MuiAlert-icon': { alignItems: 'center' }
+              }}
+            >
+              {error}
+            </Alert>
+          )}
 
-            {product.attributes.length > 0 && (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="h6" gutterBottom>Attributes</Typography>
-                <Box display="flex" gap={1} flexWrap="wrap">
-                  {product.attributes.map((attr, index) => (
-                    <Chip key={index} label={`${attr.name}: ${attr.value}`} />
-                  ))}
+          <Paper elevation={2} sx={{ p: 4, borderRadius: 2 }}>
+            <Grid container spacing={4}>
+              <Grid item xs={12} md={4}>
+                <Box
+                  sx={{
+                    height: 300,
+                    backgroundColor: 'grey.100',
+                    borderRadius: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mb: { xs: 2, md: 0 }
+                  }}
+                >
+                  {product.images && product.images.length > 0 ? (
+                    <img
+                      src={product.images[0]}
+                      alt={product.name}
+                      style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
+                    />
+                  ) : (
+                    <ShoppingBagIcon sx={{ fontSize: 64, color: 'text.secondary' }} />
+                  )}
                 </Box>
-              </Box>
-            )}
-          </Grid>
+              </Grid>
 
-          <Grid item xs={12} md={4}>
-            <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
-              <Typography variant="h6" gutterBottom>Pricing</Typography>
-              <Typography variant="h4" color="primary" gutterBottom>
-                ${(product.discountedPrice / 100).toFixed(2)}
-              </Typography>
-              {product.originalPrice !== product.discountedPrice && (
-                <Typography variant="body2" sx={{ textDecoration: 'line-through' }}>
-                  Original: ${(product.originalPrice / 100).toFixed(2)}
-                </Typography>
-              )}
-            </Paper>
+              <Grid item xs={12} md={8}>
+                <Stack spacing={3}>
+                  <Box>
+                    <Typography variant="h5" gutterBottom>
+                      {product.name}
+                    </Typography>
+                    <Stack direction="row" spacing={1} mb={2}>
+                      <Chip 
+                        label={product.brand}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
+                      <Chip
+                        label={`SKU: ${product.sku}`}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </Stack>
+                  </Box>
 
-            {product.score !== null && (
-              <Paper elevation={2} sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>AI Score</Typography>
-                <Box display="flex" alignItems="center" gap={2}>
-                  <CircularProgress
-                    variant="determinate"
-                    value={product.score}
-                    size={60}
-                  />
-                  <Typography variant="h4">{product.score}</Typography>
-                </Box>
-              </Paper>
-            )}
-          </Grid>
-        </Grid>
+                  <Box>
+                    <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+                      <LocalOfferIcon color="error" />
+                      <Typography variant="h5" color="error.main">
+                        ${(product.discountedPrice / 100).toFixed(2)}
+                      </Typography>
+                      {product.originalPrice !== product.discountedPrice && (
+                        <Typography 
+                          variant="body1" 
+                          color="text.secondary" 
+                          sx={{ textDecoration: 'line-through' }}
+                        >
+                          ${(product.originalPrice / 100).toFixed(2)}
+                        </Typography>
+                      )}
+                    </Stack>
+                  </Box>
+
+                  {product.description && (
+                    <Box>
+                      <Stack direction="row" spacing={1} alignItems="center" mb={1}>
+                        <DescriptionIcon color="action" />
+                        <Typography variant="subtitle2">
+                          Description
+                        </Typography>
+                      </Stack>
+                      <Typography variant="body1" color="text.secondary">
+                        {product.description}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {product.score !== null && (
+                    <Box>
+                      <Typography variant="subtitle2" gutterBottom>
+                        AI Score
+                      </Typography>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Rating 
+                          value={product.score / 20} 
+                          precision={0.5} 
+                          readOnly 
+                        />
+                        <Typography variant="body2" color="text.secondary">
+                          ({product.score}/100)
+                        </Typography>
+                      </Stack>
+                    </Box>
+                  )}
+
+                  <Divider />
+
+                  <Stack direction="row" spacing={2}>
+                    {product.score === null ? (
+                      <Button
+                        variant="contained"
+                        size="large"
+                        onClick={handleTransform}
+                        disabled={transforming}
+                        startIcon={transforming ? <CircularProgress size={20} /> : <AutoFixHighIcon />}
+                        sx={{
+                          py: 1.5,
+                          borderRadius: 2,
+                          backgroundColor: 'primary.dark',
+                          '&:hover': { backgroundColor: 'primary.main' }
+                        }}
+                      >
+                        {transforming ? 'Transforming...' : 'Transform Product'}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="contained"
+                        size="large"
+                        color="success"
+                        onClick={handleSave}
+                        disabled={saving}
+                        startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
+                        sx={{
+                          py: 1.5,
+                          borderRadius: 2
+                        }}
+                      >
+                        {saving ? 'Saving...' : 'Save Product'}
+                      </Button>
+                    )}
+                  </Stack>
+                </Stack>
+              </Grid>
+            </Grid>
+          </Paper>
+        </Stack>
       </Paper>
     </Container>
   );
