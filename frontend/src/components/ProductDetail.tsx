@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { getProductBySku, transformProduct, Product } from '../services/api';
+import { useParams, useNavigate } from 'react-router-dom';
+import { getProductBySku, transformProduct, saveProduct, Product } from '../services/api';
 import {
   Container,
   Typography,
@@ -10,15 +10,18 @@ import {
   Grid,
   Button,
   Chip,
-  Divider
+  Divider,
+  Stack
 } from '@mui/material';
 
 const ProductDetail: React.FC = () => {
   const { sku } = useParams<{ sku: string }>();
+  const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [transforming, setTransforming] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -55,6 +58,24 @@ const ProductDetail: React.FC = () => {
     }
   };
 
+  const handleSave = async () => {
+    if (!product) return;
+    
+    setSaving(true);
+    try {
+      const savedProduct = await saveProduct(product);
+      setProduct(savedProduct);
+      setError(null);
+      // Navigate to products list after saving
+      navigate('/');
+    } catch (error: unknown) {
+      console.error('Error saving product:', error);
+      setError('Failed to save product. Please try again later.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
@@ -88,14 +109,24 @@ const ProductDetail: React.FC = () => {
               <Typography variant="h4" component="h1" gutterBottom>
                 {product.name}
               </Typography>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleTransform}
-                disabled={transforming}
-              >
-                {transforming ? 'Transforming...' : 'Transform Product'}
-              </Button>
+              <Stack direction="row" spacing={2}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleTransform}
+                  disabled={transforming || saving}
+                >
+                  {transforming ? 'Transforming...' : 'Transform Product'}
+                </Button>
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={handleSave}
+                  disabled={transforming || saving}
+                >
+                  {saving ? 'Saving...' : 'Save Product'}
+                </Button>
+              </Stack>
             </Box>
           </Grid>
 
