@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProductBySku, transformProduct, saveProduct, Product } from '../services/api';
+import { getProductBySku, getProductVariants, transformProduct, saveProduct, Product, ProductVariants, getErrorMessage } from '../services/api';
 import {
   Container,
   Typography,
@@ -33,47 +33,77 @@ const ProductDetail: React.FC = () => {
   const { sku } = useParams<{ sku: string }>();
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
+  const [variants, setVariants] = useState<ProductVariants | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [transforming, setTransforming] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [transforming, setTransforming] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<Product | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
-    const fetchProduct = async () => {
+    const fetchData = async () => {
       if (!sku) return;
       
       try {
-        const data = await getProductBySku(sku);
-        setProduct(data);
-        if (data.variants && data.variants.length > 0) {
-          setSelectedVariant(data.variants[0]);
+        setLoading(true);
+        const [productData, variantsData] = await Promise.all([
+          getProductBySku(sku),
+          getProductVariants(sku)
+        ]);
+        
+        setProduct(productData);
+        setVariants(variantsData);
+        setSelectedColor(productData.color || null);
+        setSelectedSize(productData.size || null);
+        
+        // Find the variant that matches both color and size
+        if (variantsData.variants.length > 0) {
+          const matchingVariant = variantsData.variants.find(
+            v => v.color === productData.color && v.size === productData.size
+          );
+          setSelectedVariant(matchingVariant || null);
         }
-        setErrorMessage(null);
-      } catch (error: unknown) {
-        console.error('Error fetching product:', error);
-        setErrorMessage('Failed to fetch product details. Please try again later.');
+      } catch (error) {
+        setErrorMessage(getErrorMessage(error));
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProduct();
+    fetchData();
   }, [sku]);
+
+  const handleColorChange = (color: string) => {
+    setSelectedColor(color);
+    // Find variant with selected color and current size
+    const matchingVariant = variants?.variants.find(
+      v => v.color === color && (selectedSize ? v.size === selectedSize : true)
+    );
+    setSelectedVariant(matchingVariant || null);
+  };
+
+  const handleSizeChange = (size: string) => {
+    setSelectedSize(size);
+    // Find variant with current color and selected size
+    const matchingVariant = variants?.variants.find(
+      v => (selectedColor ? v.color === selectedColor : true) && v.size === size
+    );
+    setSelectedVariant(matchingVariant || null);
+  };
 
   const handleTransform = async () => {
     if (!sku) return;
     
-    setTransforming(true);
-    setErrorMessage(null);
-
     try {
+      setTransforming(true);
+      setErrorMessage(null);
       const transformedProduct = await transformProduct(sku);
       setProduct(transformedProduct);
-    } catch (error: unknown) {
-      console.error('Error transforming product:', error);
-      setErrorMessage('Failed to transform product. Please try again later.');
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
     } finally {
       setTransforming(false);
     }
@@ -82,406 +112,236 @@ const ProductDetail: React.FC = () => {
   const handleSave = async () => {
     if (!product) return;
     
-    setSaving(true);
     try {
-      await saveProduct(product);
-      navigate('/', { replace: true });
-    } catch (error: unknown) {
-      console.error('Error saving product:', error);
-      setErrorMessage('Failed to save product. Please try again later.');
+      setSaving(true);
+      setErrorMessage(null);
+      const savedProduct = await saveProduct(product);
+      setProduct(savedProduct);
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
     } finally {
       setSaving(false);
     }
   };
 
-  const getAttributeValue = (name: string): string | null => {
-    return product?.attributes.find(attr => attr.name === name)?.value || null;
-  };
-
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-        <CircularProgress />
-      </Box>
+      <Container>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <Container>
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {errorMessage}
+        </Alert>
+      </Container>
     );
   }
 
   if (!product) {
     return (
-      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="error">Product not found</Alert>
+      <Container>
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          Product not found
+        </Alert>
       </Container>
     );
   }
 
-  const displayedProduct = selectedVariant || product;
-  const allImages = displayedProduct.images || [];
-  const reviewCount = getAttributeValue('review_count');
-  const favoriteCount = getAttributeValue('favorite_count');
-  const deliveryInfo = getAttributeValue('delivery_info');
-  const specifications = product.attributes.filter(attr => 
-    !['review_count', 'favorite_count', 'delivery_info', 'features'].includes(attr.name)
-  );
-  const features = getAttributeValue('features')?.split('|').filter(f => f.trim()) || [];
-
   return (
-    <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
-      {errorMessage && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {errorMessage}
-        </Alert>
-      )}
-
-      <Breadcrumbs 
-        separator={<NavigateNextIcon fontSize="small" />} 
-        sx={{ mb: 2 }}
-      >
-        <Link color="inherit" href="/" sx={{ textDecoration: 'none' }}>
-          Trendyol
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} aria-label="breadcrumb" sx={{ mb: 2 }}>
+        <Link color="inherit" href="/" onClick={(e) => { e.preventDefault(); navigate('/'); }}>
+          Home
         </Link>
-        {product.category?.split('>').map((cat, index) => (
-          <Link 
-            key={index} 
-            color="inherit" 
-            href="#"
-            sx={{ textDecoration: 'none' }}
-          >
-            {cat.trim()}
-          </Link>
-        ))}
+        <Link color="inherit" href="#" onClick={(e) => e.preventDefault()}>
+          {product.category || 'Products'}
+        </Link>
         <Typography color="text.primary">{product.name}</Typography>
       </Breadcrumbs>
 
-      <Paper elevation={0} sx={{ p: 3, backgroundColor: 'transparent' }}>
-        <Grid container spacing={4}>
-          {/* Left Column - Images */}
-          <Grid item xs={12} md={6}>
-            <Box sx={{ position: 'relative', mb: 2 }}>
-              {allImages.length > 0 ? (
-                <img
-                  src={allImages[currentImageIndex]}
-                  alt={displayedProduct.name}
-                  style={{ 
-                    width: '100%', 
-                    height: 'auto', 
-                    maxHeight: '600px',
-                    objectFit: 'contain',
-                    backgroundColor: '#f8f8f8',
-                    borderRadius: '8px'
-                  }}
-                />
-              ) : (
-                <Box
-                  sx={{
-                    height: 600,
-                    backgroundColor: '#f8f8f8',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
+      <Grid container spacing={4}>
+        {/* Left Column - Images */}
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardMedia
+              component="img"
+              image={product.images[currentImageIndex]}
+              alt={product.name}
+              sx={{ width: '100%', height: 'auto', objectFit: 'contain' }}
+            />
+          </Card>
+          {product.images.length > 1 && (
+            <ImageList sx={{ mt: 2 }} cols={4} rowHeight={100}>
+              {product.images.map((image, index) => (
+                <ImageListItem 
+                  key={index}
+                  onClick={() => setCurrentImageIndex(index)}
+                  sx={{ 
+                    cursor: 'pointer',
+                    border: index === currentImageIndex ? '2px solid #1976d2' : 'none',
+                    borderRadius: 1
                   }}
                 >
-                  <ShoppingBagIcon sx={{ fontSize: 64, color: 'text.secondary' }} />
-                </Box>
+                  <img
+                    src={image}
+                    alt={`${product.name} - ${index + 1}`}
+                    loading="lazy"
+                    style={{ height: '100%', width: '100%', objectFit: 'contain' }}
+                  />
+                </ImageListItem>
+              ))}
+            </ImageList>
+          )}
+        </Grid>
+
+        {/* Right Column - Product Details */}
+        <Grid item xs={12} md={6}>
+          <Stack spacing={3}>
+            <Box>
+              <Typography variant="h4" gutterBottom>
+                {product.name}
+              </Typography>
+              <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+                {product.brand}
+              </Typography>
+            </Box>
+
+            <Box display="flex" alignItems="center" gap={2}>
+              <Rating value={product.score || 0} readOnly precision={0.5} />
+              <Typography variant="body2" color="text.secondary">
+                ({product.ratingCount} reviews)
+              </Typography>
+              <Box display="flex" alignItems="center" gap={0.5}>
+                <FavoriteIcon color="error" fontSize="small" />
+                <Typography variant="body2" color="text.secondary">
+                  {product.favoriteCount} favorites
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box>
+              <Typography variant="h5" color="error" gutterBottom>
+                ₺{product.discountedPrice.toFixed(2)}
+              </Typography>
+              {product.originalPrice > product.discountedPrice && (
+                <Typography variant="body1" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
+                  ₺{product.originalPrice.toFixed(2)}
+                </Typography>
               )}
             </Box>
-            
-            {allImages.length > 1 && (
-              <ImageList sx={{ width: '100%', height: 100 }} cols={6} rowHeight={100}>
-                {allImages.map((img, index) => (
-                  <ImageListItem 
-                    key={index}
-                    sx={{ 
-                      cursor: 'pointer',
-                      border: index === currentImageIndex ? '2px solid' : '1px solid',
-                      borderColor: index === currentImageIndex ? '#f27a1a' : '#e5e5e5',
-                      borderRadius: '4px',
-                      overflow: 'hidden'
-                    }}
-                    onClick={() => setCurrentImageIndex(index)}
-                  >
-                    <img
-                      src={img}
-                      alt={`View ${index + 1}`}
-                      style={{ height: '100%', width: '100%', objectFit: 'cover' }}
-                    />
-                  </ImageListItem>
-                ))}
-              </ImageList>
+
+            {/* Color Selection */}
+            {variants?.colors && variants.colors.length > 0 && (
+              <Box>
+                <Typography variant="subtitle1" gutterBottom>
+                  Colors
+                </Typography>
+                <Stack direction="row" spacing={1}>
+                  {variants.colors.map((color) => (
+                    <Button
+                      key={color}
+                      variant={selectedColor === color ? 'contained' : 'outlined'}
+                      onClick={() => handleColorChange(color)}
+                      sx={{ minWidth: 'auto', textTransform: 'none' }}
+                    >
+                      {color}
+                    </Button>
+                  ))}
+                </Stack>
+              </Box>
             )}
-          </Grid>
 
-          {/* Right Column - Product Info */}
-          <Grid item xs={12} md={6}>
-            <Stack spacing={3}>
+            {/* Size Selection */}
+            {variants?.sizes && variants.sizes.length > 0 && (
               <Box>
-                <Typography variant="h5" component="h1" gutterBottom>
-                  {displayedProduct.brand}
+                <Typography variant="subtitle1" gutterBottom>
+                  Sizes
                 </Typography>
-                <Typography variant="body1" color="text.secondary" gutterBottom>
-                  {displayedProduct.name}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  SKU: {displayedProduct.sku}
-                </Typography>
+                <Stack direction="row" spacing={1}>
+                  {variants.sizes.map((size) => (
+                    <Button
+                      key={size}
+                      variant={selectedSize === size ? 'contained' : 'outlined'}
+                      onClick={() => handleSizeChange(size)}
+                      sx={{ minWidth: 'auto', textTransform: 'none' }}
+                    >
+                      {size}
+                    </Button>
+                  ))}
+                </Stack>
               </Box>
+            )}
 
-              <Stack direction="row" spacing={2} alignItems="center">
-                {reviewCount && (
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <Rating 
-                      value={5.0} 
-                      precision={0.1} 
-                      readOnly 
-                      size="small"
-                    />
-                    <Typography variant="body2" color="text.secondary">
-                      ({reviewCount} Reviews)
-                    </Typography>
-                  </Stack>
-                )}
-                
-                {favoriteCount && (
-                  <Stack direction="row" alignItems="center" spacing={0.5}>
-                    <FavoriteIcon sx={{ fontSize: 16, color: '#e81224' }} />
-                    <Typography variant="body2" color="text.secondary">
-                      {favoriteCount}
-                    </Typography>
-                  </Stack>
-                )}
+            <Box>
+              <Typography variant="subtitle1" gutterBottom>
+                Shipping
+              </Typography>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <LocalShippingIcon color={product.hasFastShipping ? 'success' : 'inherit'} />
+                <Typography variant="body2">
+                  {product.shippingInfo}
+                </Typography>
               </Stack>
+            </Box>
 
+            {product.paymentOptions && product.paymentOptions.length > 0 && (
               <Box>
-                <Typography variant="h4" color="#f27a1a" fontWeight="bold">
-                  {(displayedProduct.discountedPrice / 100).toLocaleString('tr-TR', {
-                    style: 'currency',
-                    currency: 'TRY'
-                  })}
+                <Typography variant="subtitle1" gutterBottom>
+                  Payment Options
                 </Typography>
-                {displayedProduct.originalPrice !== displayedProduct.discountedPrice && (
-                  <Typography 
-                    variant="h6" 
-                    color="text.secondary" 
-                    sx={{ textDecoration: 'line-through' }}
-                  >
-                    {(displayedProduct.originalPrice / 100).toLocaleString('tr-TR', {
-                      style: 'currency',
-                      currency: 'TRY'
-                    })}
-                  </Typography>
-                )}
+                <List dense>
+                  {product.paymentOptions.map((option, index) => (
+                    <ListItem key={index}>
+                      <Typography variant="body2">{option}</Typography>
+                    </ListItem>
+                  ))}
+                </List>
               </Box>
+            )}
 
-              {deliveryInfo && (
-                <Paper 
-                  variant="outlined" 
-                  sx={{ 
-                    p: 2, 
-                    borderRadius: 2,
-                    borderColor: '#e5e5e5',
-                    backgroundColor: '#f8f8f8'
-                  }}
-                >
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <LocalShippingIcon sx={{ color: '#f27a1a' }} />
-                    <Typography variant="body2">
-                      {deliveryInfo}
-                    </Typography>
-                  </Stack>
-                </Paper>
-              )}
-
-              {product.variants && product.variants.length > 0 && (
-                <Box>
-                  <Typography variant="subtitle1" gutterBottom fontWeight="medium">
-                    Available Colors
-                  </Typography>
-                  <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
-                    {product.variants.map((variant) => (
-                      <Card
-                        key={variant.sku}
-                        sx={{
-                          width: 64,
-                          height: 64,
-                          cursor: 'pointer',
-                          border: selectedVariant?.sku === variant.sku ? '2px solid #f27a1a' : '1px solid #e5e5e5',
-                          borderRadius: 1,
-                          overflow: 'hidden'
-                        }}
-                        onClick={() => setSelectedVariant(variant)}
-                      >
-                        <CardMedia
-                          component="img"
-                          height="64"
-                          image={variant.images[0] || ''}
-                          alt={variant.color || ''}
-                        />
-                      </Card>
-                    ))}
-                  </Stack>
-                </Box>
-              )}
-
-              <Stack direction="row" spacing={2}>
-                {displayedProduct.score === null ? (
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    size="large"
-                    onClick={handleTransform}
-                    disabled={transforming}
-                    startIcon={transforming ? <CircularProgress size={20} /> : <AutoFixHighIcon />}
-                    sx={{
-                      py: 1.5,
-                      backgroundColor: '#f27a1a',
-                      '&:hover': { backgroundColor: '#d65a00' }
-                    }}
-                  >
-                    {transforming ? 'Transforming...' : 'Transform Product'}
-                  </Button>
-                ) : (
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    size="large"
-                    color="success"
-                    onClick={handleSave}
-                    disabled={saving}
-                    startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
-                    sx={{
-                      py: 1.5,
-                      backgroundColor: '#f27a1a',
-                      '&:hover': { backgroundColor: '#d65a00' }
-                    }}
-                  >
-                    {saving ? 'Saving...' : 'Save Product'}
-                  </Button>
-                )}
-              </Stack>
-
-              <Divider />
-
-              {features.length > 0 && (
-                <Box sx={{ mt: 4 }}>
-                  <Typography variant="h6" gutterBottom fontWeight="medium" color="#333">
-                    Ürün Özellikleri
-                  </Typography>
-                  <Paper 
-                    variant="outlined" 
-                    sx={{ 
-                      p: 3,
-                      borderRadius: 2,
-                      borderColor: '#e5e5e5',
-                      backgroundColor: '#fff'
-                    }}
-                  >
-                    <Grid container spacing={2}>
-                      {features.map((feature, index) => (
-                        <Grid item xs={12} sm={6} key={index}>
-                          <Stack 
-                            direction="row" 
-                            spacing={2} 
-                            alignItems="flex-start"
-                            sx={{
-                              p: 1,
-                              borderRadius: 1,
-                              '&:hover': {
-                                backgroundColor: '#f8f8f8'
-                              }
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                width: 6,
-                                height: 6,
-                                borderRadius: '50%',
-                                backgroundColor: '#f27a1a',
-                                mt: 1
-                              }}
-                            />
-                            <Typography 
-                              variant="body2" 
-                              color="text.primary"
-                              sx={{ 
-                                flex: 1,
-                                lineHeight: 1.6
-                              }}
-                            >
-                              {feature.trim()}
-                            </Typography>
-                          </Stack>
-                        </Grid>
-                      ))}
-                    </Grid>
-                  </Paper>
-                </Box>
-              )}
-
-              {specifications.length > 0 && (
-                <Box sx={{ mt: 4 }}>
-                  <Typography variant="h6" gutterBottom fontWeight="medium" color="#333">
-                    Ürün Bilgileri
-                  </Typography>
-                  <Paper 
-                    variant="outlined" 
-                    sx={{ 
-                      borderRadius: 2,
-                      borderColor: '#e5e5e5',
-                      backgroundColor: '#fff'
-                    }}
-                  >
-                    <List disablePadding>
-                      {specifications.map((spec, index) => (
-                        <ListItem 
-                          key={index} 
-                          sx={{
-                            py: 2,
-                            px: 3,
-                            borderBottom: index < specifications.length - 1 ? '1px solid #e5e5e5' : 'none',
-                            '&:hover': {
-                              backgroundColor: '#f8f8f8'
-                            }
-                          }}
-                        >
-                          <Grid container spacing={2}>
-                            <Grid item xs={12} sm={4}>
-                              <Typography 
-                                variant="body2" 
-                                color="text.secondary"
-                                sx={{ fontWeight: 500 }}
-                              >
-                                {spec.name}
-                              </Typography>
-                            </Grid>
-                            <Grid item xs={12} sm={8}>
-                              <Typography variant="body2" color="text.primary">
-                                {spec.value}
-                              </Typography>
-                            </Grid>
-                          </Grid>
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Paper>
-                </Box>
-              )}
-
-              {displayedProduct.description && (
-                <Box>
-                  <Typography variant="subtitle1" gutterBottom fontWeight="medium">
-                    Description
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>
-                    {displayedProduct.description}
-                  </Typography>
-                </Box>
-              )}
+            <Stack direction="row" spacing={2}>
+              <Button
+                variant="contained"
+                startIcon={<ShoppingBagIcon />}
+                fullWidth
+                size="large"
+                onClick={() => {/* Handle add to cart */}}
+              >
+                Add to Cart
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<SaveIcon />}
+                fullWidth
+                size="large"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<AutoFixHighIcon />}
+                fullWidth
+                size="large"
+                onClick={handleTransform}
+                disabled={transforming}
+              >
+                {transforming ? 'Transforming...' : 'Transform'}
+              </Button>
             </Stack>
-          </Grid>
+          </Stack>
         </Grid>
-      </Paper>
+      </Grid>
     </Container>
   );
 };
 
-export default ProductDetail; 
+export default ProductDetail;

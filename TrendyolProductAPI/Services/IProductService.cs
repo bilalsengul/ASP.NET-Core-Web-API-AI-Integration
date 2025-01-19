@@ -6,10 +6,11 @@ namespace TrendyolProductAPI.Services
 {
     public interface IProductService
     {
-        Task<List<Product>> CrawlProductAsync(string productUrl);
-        Task<Product?> TransformProductAsync(string sku);
-        Task<List<Product>> GetAllProductsAsync();
-        Task<Product?> GetProductBySkuAsync(string sku);
+        Task<IEnumerable<Product>> GetAllProductsAsync();
+        Task<Product> GetProductBySkuAsync(string sku);
+        Task<ProductVariants> GetProductVariantsAsync(string sku);
         Task<Product> SaveProductAsync(Product product);
+        Task<IEnumerable<Product>> CrawlProductAsync(string url);
+        Task<Product> TransformProductAsync(string sku);
     }
-} 
+}

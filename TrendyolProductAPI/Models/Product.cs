@@ -23,6 +23,15 @@ namespace TrendyolProductAPI.Models
         public decimal DiscountedPrice { get; set; }
         public List<string> Images { get; set; } = new List<string>();
         public decimal? Score { get; set; }
+        public int RatingCount { get; set; }
+        public int FavoriteCount { get; set; }
+        public string? ShippingInfo { get; set; }
+        public string? SellerName { get; set; }
+        public bool HasFastShipping { get; set; }
+        public List<string> PaymentOptions { get; set; } = new List<string>();
+        public string? StockStatus { get; set; }
+        public string? CampaignInfo { get; set; }
+        public DateTime? CampaignEndDate { get; set; }
         public bool IsSaved { get; set; }
         public string? Color { get; set; }
         public string? Size { get; set; }
@@ -49,6 +58,15 @@ namespace TrendyolProductAPI.Models
                 DiscountedPrice = this.DiscountedPrice,
                 Images = new List<string>(this.Images),
                 Score = this.Score,
+                RatingCount = this.RatingCount,
+                FavoriteCount = this.FavoriteCount,
+                ShippingInfo = this.ShippingInfo,
+                SellerName = this.SellerName,
+                HasFastShipping = this.HasFastShipping,
+                PaymentOptions = new List<string>(this.PaymentOptions),
+                StockStatus = this.StockStatus,
+                CampaignInfo = this.CampaignInfo,
+                CampaignEndDate = this.CampaignEndDate,
                 IsSaved = this.IsSaved,
                 Color = this.Color,
                 Size = this.Size,

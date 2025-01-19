@@ -52,7 +52,7 @@ builder.Services.AddScoped<IProductService, ProductService>();
 // Configure logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
-builder.Logging.SetMinimumLevel(LogLevel.Information);
+builder.Logging.SetMinimumLevel(LogLevel.Debug); // Set to Debug for more detailed logs
 
 // Add CORS configuration
 builder.Services.AddCors(options =>
@@ -84,11 +84,37 @@ if (app.Environment.IsDevelopment())
 // Enable CORS before other middleware
 app.UseCors();
 
-// The rest of your middleware
-app.UseHttpsRedirection();
-app.UseMiddleware<ApiKeyMiddleware>();
+// Add request logging middleware first
 app.UseMiddleware<RequestLoggingMiddleware>();
+
+// Add API key middleware before routing
+app.UseMiddleware<ApiKeyMiddleware>();
+
+// The rest of your middleware
+app.UseRouting();
+app.UseHttpsRedirection();
 app.UseAuthorization();
+
+// Map controllers after all middleware
 app.MapControllers();
+
+// Log all registered endpoints
+var endpoints = app.Services
+    .GetRequiredService<IEnumerable<EndpointDataSource>>()
+    .SelectMany(source => source.Endpoints);
+
+logger = app.Services.GetRequiredService<ILogger<Program>>();
+foreach (var endpoint in endpoints)
+{
+    if (endpoint is RouteEndpoint routeEndpoint)
+    {
+        logger.LogInformation(
+            "Endpoint: {DisplayName}, Route: {RoutePattern}, HTTP Methods: {HttpMethods}",
+            routeEndpoint.DisplayName,
+            routeEndpoint.RoutePattern.RawText,
+            string.Join(", ", routeEndpoint.Metadata.GetOrderedMetadata<HttpMethodMetadata>().SelectMany(m => m.HttpMethods))
+        );
+    }
+}
 
 app.Run();
