@@ -7,11 +7,13 @@ namespace TrendyolProductAPI.Middleware
     public class ApiKeyMiddleware
     {
         private readonly RequestDelegate _next;
+        private readonly IConfiguration _configuration;
         private const string API_KEY_HEADER = "X-API-Key";
 
-        public ApiKeyMiddleware(RequestDelegate next)
+        public ApiKeyMiddleware(RequestDelegate next, IConfiguration configuration)
         {
             _next = next;
+            _configuration = configuration;
         }
 
         public async Task InvokeAsync(HttpContext context)
@@ -23,8 +25,7 @@ namespace TrendyolProductAPI.Middleware
                 return;
             }
 
-            var appSettings = context.RequestServices.GetRequiredService<IConfiguration>();
-            var apiKey = appSettings.GetValue<string>("ApiKey");
+            var apiKey = _configuration["ApiKey"];
 
             if (string.IsNullOrEmpty(apiKey))
             {
