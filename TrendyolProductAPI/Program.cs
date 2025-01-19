@@ -57,11 +57,17 @@ builder.Logging.SetMinimumLevel(LogLevel.Information);
 // Add CORS configuration
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(policy =>
+    options.AddDefaultPolicy(builder =>
     {
-        policy.WithOrigins("http://localhost:5173") // Frontend URL
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        builder.WithOrigins("http://localhost:5173")
+               .AllowAnyMethod()
+               .AllowAnyHeader()
+               .WithExposedHeaders("X-API-Key")
+               .SetIsOriginAllowed(origin => 
+               {
+                   var allowedOrigins = new[] { "http://localhost:5173" };
+                   return allowedOrigins.Contains(origin);
+               });
     });
 });
 
@@ -79,17 +85,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Enable CORS first
+// Enable CORS before any other middleware
 app.UseCors();
 
+// The rest of your middleware
 app.UseHttpsRedirection();
-
-// Add custom middleware
 app.UseMiddleware<ApiKeyMiddleware>();
 app.UseMiddleware<RequestLoggingMiddleware>();
-
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();

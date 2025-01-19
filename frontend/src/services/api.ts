@@ -33,16 +33,29 @@ export interface Product {
 const handleApiError = (error: unknown) => {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<{ message: string }>;
+    console.error('API Error:', {
+      status: axiosError.response?.status,
+      statusText: axiosError.response?.statusText,
+      data: axiosError.response?.data,
+      headers: axiosError.response?.headers
+    });
+
     if (axiosError.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      throw new Error(axiosError.response.data?.message || 'Server error occurred');
+      if (axiosError.response.status === 401) {
+        throw new Error('Invalid API key. Please check your configuration.');
+      } else if (axiosError.response.status === 403) {
+        throw new Error('Access forbidden. Please check your API key.');
+      } else if (axiosError.response.status === 404) {
+        throw new Error('Resource not found.');
+      } else {
+        throw new Error(axiosError.response.data?.message || `Server error: ${axiosError.response.status}`);
+      }
     } else if (axiosError.request) {
-      // The request was made but no response was received
-      throw new Error('No response received from server. Please check your connection.');
+      console.error('No response received:', axiosError.request);
+      throw new Error('No response received from server. Please check if the backend is running.');
     }
   }
-  // Something happened in setting up the request that triggered an Error
+  console.error('Unexpected error:', error);
   throw new Error('An unexpected error occurred');
 };
 
@@ -85,5 +98,23 @@ export const getProductBySku = async (sku: string): Promise<Product> => {
     throw error;
   }
 };
+
+export const saveProduct = async (product: Product): Promise<Product> => {
+  try {
+    const response = await api.post('/Product/save', product);
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+    throw error;
+  }
+};
+
+// Add request interceptor to ensure API key is set
+api.interceptors.request.use((config) => {
+  if (!config.headers['X-API-Key']) {
+    config.headers['X-API-Key'] = API_KEY;
+  }
+  return config;
+});
 
 export default api; 

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Threading.Tasks;
 using TrendyolProductAPI.Services;
+using TrendyolProductAPI.Models;
 
 namespace TrendyolProductAPI.Controllers
 {
@@ -19,61 +20,59 @@ namespace TrendyolProductAPI.Controllers
         }
 
         [HttpPost("crawl")]
-        public async Task<IActionResult> CrawlProduct([FromBody] string productUrl)
+        public async Task<ActionResult<IEnumerable<Product>>> CrawlProduct([FromBody] string productUrl)
         {
             try
             {
-                if (string.IsNullOrEmpty(productUrl))
-                {
-                    return BadRequest("Product URL is required");
-                }
-
                 _logger.LogInformation("Crawling product from URL: {url}", productUrl);
                 var products = await _productService.CrawlProductAsync(productUrl);
-                
-                if (products == null || products.Count == 0)
-                {
-                    return NotFound("No products found at the specified URL");
-                }
-
                 return Ok(products);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error crawling product from URL: {Url}", productUrl);
+                _logger.LogError(ex, "Error crawling product from URL: {url}", productUrl);
                 return StatusCode(500, "An error occurred while crawling the product. Please check the logs for details.");
             }
         }
 
         [HttpPost("transform/{sku}")]
-        public async Task<IActionResult> TransformProduct(string sku)
+        public async Task<ActionResult<Product>> TransformProduct(string sku)
         {
             try
             {
-                if (string.IsNullOrEmpty(sku))
-                {
-                    return BadRequest("SKU is required");
-                }
-
                 _logger.LogInformation("Transforming product with SKU: {sku}", sku);
                 var transformedProduct = await _productService.TransformProductAsync(sku);
-                
                 if (transformedProduct == null)
                 {
                     return NotFound($"Product with SKU {sku} not found");
                 }
-
                 return Ok(transformedProduct);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error transforming product with SKU: {Sku}. Error: {Error}", sku, ex.Message);
-                return StatusCode(500, $"An error occurred while transforming the product: {ex.Message}");
+                _logger.LogError(ex, "Error transforming product with SKU: {sku}", sku);
+                return StatusCode(500, "An error occurred while transforming the product. Please check the logs for details.");
+            }
+        }
+
+        [HttpPost("save")]
+        public async Task<ActionResult<Product>> SaveProduct([FromBody] Product product)
+        {
+            try
+            {
+                _logger.LogInformation("Saving product with SKU: {sku}", product.Sku);
+                var savedProduct = await _productService.SaveProductAsync(product);
+                return Ok(savedProduct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving product with SKU: {sku}", product.Sku);
+                return StatusCode(500, "An error occurred while saving the product. Please check the logs for details.");
             }
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllProducts()
+        public async Task<ActionResult<IEnumerable<Product>>> GetAllProducts()
         {
             try
             {
@@ -84,34 +83,27 @@ namespace TrendyolProductAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving all products");
-                return StatusCode(500, "An error occurred while retrieving products");
+                return StatusCode(500, "An error occurred while retrieving products. Please check the logs for details.");
             }
         }
 
         [HttpGet("{sku}")]
-        public async Task<IActionResult> GetProduct(string sku)
+        public async Task<ActionResult<Product>> GetProductBySku(string sku)
         {
             try
             {
-                if (string.IsNullOrEmpty(sku))
-                {
-                    return BadRequest("SKU is required");
-                }
-
                 _logger.LogInformation("Retrieving product with SKU: {sku}", sku);
                 var product = await _productService.GetProductBySkuAsync(sku);
-                
                 if (product == null)
                 {
                     return NotFound($"Product with SKU {sku} not found");
                 }
-
                 return Ok(product);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving product with SKU: {Sku}", sku);
-                return StatusCode(500, "An error occurred while retrieving the product");
+                _logger.LogError(ex, "Error retrieving product with SKU: {sku}", sku);
+                return StatusCode(500, "An error occurred while retrieving the product. Please check the logs for details.");
             }
         }
     }

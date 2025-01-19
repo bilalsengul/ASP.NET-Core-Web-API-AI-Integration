@@ -10,5 +10,6 @@ namespace TrendyolProductAPI.Services
         Task<Product?> TransformProductAsync(string sku);
         Task<List<Product>> GetAllProductsAsync();
         Task<Product?> GetProductBySkuAsync(string sku);
+        Task<Product> SaveProductAsync(Product product);
     }
 } 

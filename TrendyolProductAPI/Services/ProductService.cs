@@ -218,5 +218,24 @@ namespace TrendyolProductAPI.Services
             var match = Regex.Match(response, @"""score""\s*:\s*(\d+)", RegexOptions.IgnoreCase);
             return match.Success && decimal.TryParse(match.Groups[1].Value, out decimal score) ? score : 0;
         }
+
+        public async Task<Product> SaveProductAsync(Product product)
+        {
+            try
+            {
+                _logger.LogInformation("Saving product with SKU: {sku}", product.Sku);
+                
+                // Store in cache
+                _cache.Set($"{CACHE_KEY_PREFIX}{product.Sku}", product);
+                
+                _logger.LogInformation("Successfully saved product with SKU: {sku}", product.Sku);
+                return product;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving product with SKU: {sku}", product.Sku);
+                throw;
+            }
+        }
     }
 } 
