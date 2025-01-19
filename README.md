@@ -4,11 +4,11 @@ A modern web application that crawls product information from Trendyol, transfor
 
 ## Features
 
-- 🛍️ **Product Crawling**: Easily fetch product details from Trendyol URLs
-- 🤖 **AI Transformation**: Transform product information using OpenAI's GPT-4
-- 💾 **Product Management**: Save and view your transformed products
-- 🎨 **Modern UI**: Clean and responsive interface built with Material-UI
-- 🌐 **Multi-language Support**: Product details are translated to English
+-  **Product Crawling**: Easily fetch product details from Trendyol URLs
+-  **AI Transformation**: Transform product information using OpenAI's GPT-4
+-  **Product Management**: Save and view your transformed products
+-  **Modern UI**: Clean and responsive interface built with Material-UI
+-  **Multi-language Support**: Product details are translated to English
 
 ## Getting Started
 
