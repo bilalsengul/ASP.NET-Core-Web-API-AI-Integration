@@ -14,18 +14,13 @@ namespace TrendyolProductAPI.Models
         public string? Description { get; set; }
         public string? Sku { get; set; }
         public string? ParentSku { get; set; }
-        public List<ProductAttribute> Attributes { get; set; }
+        public List<ProductAttribute> Attributes { get; set; } = new List<ProductAttribute>();
         public string? Category { get; set; }
         public string? Brand { get; set; }
         public decimal OriginalPrice { get; set; }
         public decimal DiscountedPrice { get; set; }
-        public List<string> Images { get; set; }
+        public List<string> Images { get; set; } = new List<string>();
         public decimal? Score { get; set; }
-
-        public Product()
-        {
-            Attributes = new List<ProductAttribute>();
-            Images = new List<string>();
-        }
+        public bool IsSaved { get; set; }
     }
 } 

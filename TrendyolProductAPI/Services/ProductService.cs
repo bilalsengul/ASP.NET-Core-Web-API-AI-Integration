@@ -170,6 +170,9 @@ namespace TrendyolProductAPI.Services
                     throw new Exception("Failed to parse OpenAI response");
                 }
 
+                // Store the transformed product in cache
+                _cache.Set($"{CACHE_KEY_PREFIX}{sku}", transformedProduct);
+
                 _logger.LogInformation("Successfully transformed product with SKU: {sku}", sku);
                 return transformedProduct;
             }
@@ -188,20 +191,23 @@ namespace TrendyolProductAPI.Services
             
             foreach (var key in cacheKeys)
             {
-                if (_cache.TryGetValue(key, out Product? product) && product != null)
+                if (_cache.TryGetValue(key, out Product? product) && product != null && product.IsSaved)
                 {
                     products.Add(product);
                 }
             }
             
-            return products;
+            return products.OrderByDescending(p => p.Score).ToList();
         }
 
         public async Task<Product?> GetProductBySkuAsync(string sku)
         {
             await Task.CompletedTask;
-            _cache.TryGetValue($"{CACHE_KEY_PREFIX}{sku}", out Product? product);
-            return product;
+            if (_cache.TryGetValue($"{CACHE_KEY_PREFIX}{sku}", out Product? product))
+            {
+                return product;
+            }
+            return null;
         }
 
         private string ExtractValue(string response, string key)
@@ -225,8 +231,14 @@ namespace TrendyolProductAPI.Services
             {
                 _logger.LogInformation("Saving product with SKU: {sku}", product.Sku);
                 
-                // Store in cache
-                _cache.Set($"{CACHE_KEY_PREFIX}{product.Sku}", product);
+                // Store in cache with a longer expiration time for saved products
+                var cacheEntryOptions = new MemoryCacheEntryOptions()
+                    .SetSlidingExpiration(TimeSpan.FromDays(30));
+                
+                // Add a flag to indicate this is a saved product
+                product.IsSaved = true;
+                
+                _cache.Set($"{CACHE_KEY_PREFIX}{product.Sku}", product, cacheEntryOptions);
                 
                 _logger.LogInformation("Successfully saved product with SKU: {sku}", product.Sku);
                 return product;

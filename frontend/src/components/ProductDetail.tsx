@@ -63,11 +63,10 @@ const ProductDetail: React.FC = () => {
     
     setSaving(true);
     try {
-      const savedProduct = await saveProduct(product);
-      setProduct(savedProduct);
+      await saveProduct(product);
       setError(null);
       // Navigate to products list after saving
-      navigate('/');
+      navigate('/', { replace: true });
     } catch (error: unknown) {
       console.error('Error saving product:', error);
       setError('Failed to save product. Please try again later.');
@@ -110,22 +109,25 @@ const ProductDetail: React.FC = () => {
                 {product.name}
               </Typography>
               <Stack direction="row" spacing={2}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleTransform}
-                  disabled={transforming || saving}
-                >
-                  {transforming ? 'Transforming...' : 'Transform Product'}
-                </Button>
-                <Button
-                  variant="contained"
-                  color="success"
-                  onClick={handleSave}
-                  disabled={transforming || saving}
-                >
-                  {saving ? 'Saving...' : 'Save Product'}
-                </Button>
+                {product.score === null ? (
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleTransform}
+                    disabled={transforming}
+                  >
+                    {transforming ? 'Transforming...' : 'Transform Product'}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="contained"
+                    color="success"
+                    onClick={handleSave}
+                    disabled={saving}
+                  >
+                    {saving ? 'Saving...' : 'Save Product'}
+                  </Button>
+                )}
               </Stack>
             </Box>
           </Grid>

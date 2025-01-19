@@ -101,7 +101,11 @@ export const getProductBySku = async (sku: string): Promise<Product> => {
 
 export const saveProduct = async (product: Product): Promise<Product> => {
   try {
-    const response = await api.post('/Product/save', product);
+    const response = await api.post('/Product/save', product, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
     return response.data;
   } catch (error) {
     handleApiError(error);

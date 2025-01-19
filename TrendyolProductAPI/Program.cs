@@ -62,12 +62,8 @@ builder.Services.AddCors(options =>
         builder.WithOrigins("http://localhost:5173")
                .AllowAnyMethod()
                .AllowAnyHeader()
-               .WithExposedHeaders("X-API-Key")
-               .SetIsOriginAllowed(origin => 
-               {
-                   var allowedOrigins = new[] { "http://localhost:5173" };
-                   return allowedOrigins.Contains(origin);
-               });
+               .WithMethods("GET", "POST", "PUT", "DELETE")
+               .WithExposedHeaders("X-API-Key");
     });
 });
 
@@ -85,7 +81,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Enable CORS before any other middleware
+// Enable CORS before other middleware
 app.UseCors();
 
 // The rest of your middleware

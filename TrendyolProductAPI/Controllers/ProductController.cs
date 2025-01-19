@@ -56,17 +56,29 @@ namespace TrendyolProductAPI.Controllers
         }
 
         [HttpPost("save")]
+        [Consumes("application/json")]
+        [Produces("application/json")]
         public async Task<ActionResult<Product>> SaveProduct([FromBody] Product product)
         {
             try
             {
+                if (product == null)
+                {
+                    return BadRequest("Product data is required");
+                }
+
+                if (string.IsNullOrEmpty(product.Sku))
+                {
+                    return BadRequest("Product SKU is required");
+                }
+
                 _logger.LogInformation("Saving product with SKU: {sku}", product.Sku);
                 var savedProduct = await _productService.SaveProductAsync(product);
                 return Ok(savedProduct);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error saving product with SKU: {sku}", product.Sku);
+                _logger.LogError(ex, "Error saving product with SKU: {sku}", product?.Sku);
                 return StatusCode(500, "An error occurred while saving the product. Please check the logs for details.");
             }
         }
