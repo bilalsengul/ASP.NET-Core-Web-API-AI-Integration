@@ -41,16 +41,170 @@ namespace TrendyolProductAPI.Services
             {
                 var web = new HtmlWeb();
                 var doc = await web.LoadFromWebAsync(productUrl);
+                var products = new List<Product>();
 
+                // Extract base SKU from URL
+                var skuMatch = Regex.Match(productUrl, @"p-(\d+)");
+                var baseSku = skuMatch.Success ? skuMatch.Groups[1].Value : null;
+
+                if (string.IsNullOrEmpty(baseSku))
+                {
+                    throw new Exception("Could not extract SKU from URL");
+                }
+
+                // Get all variant groups (colors, sizes, etc.)
+                var variantGroups = doc.DocumentNode.SelectNodes("//div[contains(@class, 'variant-wrapper')]");
+                var colorVariants = doc.DocumentNode.SelectNodes("//div[contains(@class, 'sp-itm')]");
+                var sizeVariants = doc.DocumentNode.SelectNodes("//div[contains(@class, 'size-variant-wrapper')]//div[contains(@class, 'variants')]//a");
+
+                if ((variantGroups == null || !variantGroups.Any()) && 
+                    (colorVariants == null || !colorVariants.Any()) && 
+                    (sizeVariants == null || !sizeVariants.Any()))
+                {
+                    // If no variants found, get the main product
+                    var product = await ExtractProductDetails(doc, baseSku, null);
+                    if (product != null)
+                    {
+                        products.Add(product);
+                    }
+                }
+                else
+                {
+                    // Handle color variants first
+                    if (colorVariants != null && colorVariants.Any())
+                    {
+                        foreach (var colorVariant in colorVariants)
+                        {
+                            var variantUrl = colorVariant.GetAttributeValue("href", "");
+                            var variantColor = colorVariant.SelectSingleNode(".//span")?.InnerText.Trim();
+                            
+                            if (!string.IsNullOrEmpty(variantUrl))
+                            {
+                                if (!variantUrl.StartsWith("http"))
+                                {
+                                    variantUrl = "https://www.trendyol.com" + variantUrl;
+                                }
+
+                                var variantDoc = await web.LoadFromWebAsync(variantUrl);
+                                var variantSkuMatch = Regex.Match(variantUrl, @"p-(\d+)");
+                                var variantSku = variantSkuMatch.Success ? variantSkuMatch.Groups[1].Value : null;
+
+                                if (!string.IsNullOrEmpty(variantSku))
+                                {
+                                    // For each color variant, check for size variants
+                                    if (sizeVariants != null && sizeVariants.Any())
+                                    {
+                                        foreach (var sizeVariant in sizeVariants)
+                                        {
+                                            var size = sizeVariant.InnerText.Trim();
+                                            var sizeVariantProduct = await ExtractProductDetails(variantDoc, variantSku, baseSku);
+                                            
+                                            if (sizeVariantProduct != null)
+                                            {
+                                                // Add color and size attributes
+                                                if (!string.IsNullOrEmpty(variantColor))
+                                                {
+                                                    sizeVariantProduct.Attributes.Add(new ProductAttribute 
+                                                    { 
+                                                        Key = "color",
+                                                        Name = variantColor 
+                                                    });
+                                                }
+                                                sizeVariantProduct.Attributes.Add(new ProductAttribute 
+                                                { 
+                                                    Key = "size",
+                                                    Name = size 
+                                                });
+                                                
+                                                products.Add(sizeVariantProduct);
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // Color variant without sizes
+                                        var colorVariantProduct = await ExtractProductDetails(variantDoc, variantSku, baseSku);
+                                        if (colorVariantProduct != null)
+                                        {
+                                            if (!string.IsNullOrEmpty(variantColor))
+                                            {
+                                                colorVariantProduct.Attributes.Add(new ProductAttribute 
+                                                { 
+                                                    Key = "color",
+                                                    Name = variantColor 
+                                                });
+                                            }
+                                            products.Add(colorVariantProduct);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if (sizeVariants != null && sizeVariants.Any())
+                    {
+                        // Handle size variants without colors
+                        var mainProduct = await ExtractProductDetails(doc, baseSku, null);
+                        if (mainProduct != null)
+                        {
+                            foreach (var sizeVariant in sizeVariants)
+                            {
+                                var size = sizeVariant.InnerText.Trim();
+                                var sizeVariantProduct = mainProduct.Clone() as Product;
+                                if (sizeVariantProduct != null)
+                                {
+                                    sizeVariantProduct.Attributes.Add(new ProductAttribute 
+                                    { 
+                                        Key = "size",
+                                        Name = size 
+                                    });
+                                    products.Add(sizeVariantProduct);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // If no products were found, try to get the main product
+                if (!products.Any())
+                {
+                    var mainProduct = await ExtractProductDetails(doc, baseSku, null);
+                    if (mainProduct != null)
+                    {
+                        products.Add(mainProduct);
+                    }
+                }
+
+                // Cache all products
+                foreach (var product in products)
+                {
+                    var cacheKey = $"{CACHE_KEY_PREFIX}{product.Sku}";
+                    _cache.Set(cacheKey, product);
+                    _cache.AddKey(cacheKey);
+                }
+
+                _logger.LogInformation("Successfully crawled {count} products for URL: {url}", products.Count, productUrl);
+                return products;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error crawling product from URL: {Url}", productUrl);
+                throw;
+            }
+        }
+
+        private async Task<Product?> ExtractProductDetails(HtmlDocument doc, string sku, string? parentSku)
+        {
+            try
+            {
                 // Extract product information using HTML nodes
                 var name = doc.DocumentNode.SelectSingleNode("//h1[@class='pr-new-br']")?.InnerText.Trim();
                 var brand = doc.DocumentNode.SelectSingleNode("//h1[@class='pr-new-br']/a")?.InnerText.Trim();
                 var description = doc.DocumentNode.SelectSingleNode("//div[@class='product-description']")?.InnerText.Trim();
                 
-                // Extract SKU from URL
-                var skuMatch = Regex.Match(productUrl, @"p-(\d+)");
-                var sku = skuMatch.Success ? skuMatch.Groups[1].Value : null;
-
+                // Extract color/variant information
+                var selectedVariant = doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'selected')]//span")?.InnerText.Trim();
+                
                 // Extract prices
                 var priceNode = doc.DocumentNode.SelectSingleNode("//span[@class='prc-dsc']");
                 var originalPriceNode = doc.DocumentNode.SelectSingleNode("//span[@class='prc-org']");
@@ -79,29 +233,62 @@ namespace TrendyolProductAPI.Services
                     .Where(src => !string.IsNullOrEmpty(src))
                     .ToList() ?? new List<string>();
 
-                var product = new Product
+                // Extract attributes (including color/size variants)
+                var attributes = new List<ProductAttribute>();
+                
+                // Add color/variant as an attribute if available
+                if (!string.IsNullOrEmpty(selectedVariant))
+                {
+                    attributes.Add(new ProductAttribute 
+                    { 
+                        Key = "color",
+                        Name = selectedVariant 
+                    });
+                }
+
+                // Extract other attributes
+                var attributeNodes = doc.DocumentNode.SelectNodes("//div[contains(@class, 'prop-item')]");
+                if (attributeNodes != null)
+                {
+                    foreach (var attrNode in attributeNodes)
+                    {
+                        var key = attrNode.SelectSingleNode(".//span[@class='prop-key']")?.InnerText.Trim();
+                        var value = attrNode.SelectSingleNode(".//span[@class='prop-value']")?.InnerText.Trim();
+                        
+                        if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(value))
+                        {
+                            attributes.Add(new ProductAttribute 
+                            { 
+                                Key = key.ToLowerInvariant(),
+                                Name = value 
+                            });
+                        }
+                    }
+                }
+
+                if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(brand))
+                {
+                    _logger.LogWarning("Required product information missing for SKU: {sku}", sku);
+                    return null;
+                }
+
+                return new Product
                 {
                     Name = name,
                     Description = description,
                     Sku = sku,
+                    ParentSku = parentSku,
                     Brand = brand,
                     OriginalPrice = originalPrice,
                     DiscountedPrice = discountedPrice,
                     Images = images,
-                    Attributes = new List<ProductAttribute>()
+                    Attributes = attributes
                 };
-
-                // Cache the product
-                var cacheKey = $"{CACHE_KEY_PREFIX}{sku}";
-                _cache.Set(cacheKey, product);
-                _cache.AddKey(cacheKey);
-
-                return new List<Product> { product };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error crawling product from URL: {Url}", productUrl);
-                throw;
+                _logger.LogError(ex, "Error extracting product details for SKU: {sku}", sku);
+                return null;
             }
         }
 

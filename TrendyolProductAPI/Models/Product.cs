@@ -8,7 +8,7 @@ namespace TrendyolProductAPI.Models
         public string? Name { get; set; }
     }
 
-    public class Product
+    public class Product : ICloneable
     {
         public string? Name { get; set; }
         public string? Description { get; set; }
@@ -22,5 +22,28 @@ namespace TrendyolProductAPI.Models
         public List<string> Images { get; set; } = new List<string>();
         public decimal? Score { get; set; }
         public bool IsSaved { get; set; }
+
+        public object Clone()
+        {
+            return new Product
+            {
+                Name = this.Name,
+                Description = this.Description,
+                Sku = this.Sku,
+                ParentSku = this.ParentSku,
+                Attributes = this.Attributes.Select(a => new ProductAttribute 
+                { 
+                    Key = a.Key, 
+                    Name = a.Name 
+                }).ToList(),
+                Category = this.Category,
+                Brand = this.Brand,
+                OriginalPrice = this.OriginalPrice,
+                DiscountedPrice = this.DiscountedPrice,
+                Images = new List<string>(this.Images),
+                Score = this.Score,
+                IsSaved = this.IsSaved
+            };
+        }
     }
 } 
