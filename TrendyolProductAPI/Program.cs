@@ -4,6 +4,11 @@ using TrendyolProductAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure logging first
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.SetMinimumLevel(LogLevel.Debug);
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -49,11 +54,6 @@ builder.Services.AddHttpClient();
 // Register ProductService
 builder.Services.AddScoped<IProductService, ProductService>();
 
-// Configure logging
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.SetMinimumLevel(LogLevel.Debug); // Set to Debug for more detailed logs
-
 // Add CORS configuration
 builder.Services.AddCors(options =>
 {
@@ -62,17 +62,11 @@ builder.Services.AddCors(options =>
         builder.WithOrigins("http://localhost:5173")
                .AllowAnyMethod()
                .AllowAnyHeader()
-               .WithMethods("GET", "POST", "PUT", "DELETE")
                .WithExposedHeaders("X-API-Key");
     });
 });
 
 var app = builder.Build();
-
-// Log configuration values
-var logger = app.Services.GetRequiredService<ILogger<Program>>();
-logger.LogInformation("API Key configured: {exists}", !string.IsNullOrEmpty(app.Configuration["ApiKey"]));
-logger.LogInformation("OpenAI Key configured: {exists}", !string.IsNullOrEmpty(app.Configuration["OpenAI:ApiKey"]));
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -84,35 +78,37 @@ if (app.Environment.IsDevelopment())
 // Enable CORS before other middleware
 app.UseCors();
 
-// Add request logging middleware first
+// Add request logging middleware
 app.UseMiddleware<RequestLoggingMiddleware>();
 
-// Add API key middleware before routing
+// Add API key middleware
 app.UseMiddleware<ApiKeyMiddleware>();
 
-// The rest of your middleware
+// Use routing and endpoints
 app.UseRouting();
-app.UseHttpsRedirection();
 app.UseAuthorization();
-
-// Map controllers after all middleware
 app.MapControllers();
 
 // Log all registered endpoints
+var endpointLogger = app.Services.GetRequiredService<ILogger<Program>>();
 var endpoints = app.Services
     .GetRequiredService<IEnumerable<EndpointDataSource>>()
     .SelectMany(source => source.Endpoints);
 
-logger = app.Services.GetRequiredService<ILogger<Program>>();
 foreach (var endpoint in endpoints)
 {
     if (endpoint is RouteEndpoint routeEndpoint)
     {
-        logger.LogInformation(
+        var httpMethods = routeEndpoint.Metadata
+            .OfType<HttpMethodMetadata>()
+            .FirstOrDefault()
+            ?.HttpMethods ?? new[] { "Unknown" };
+
+        endpointLogger.LogInformation(
             "Endpoint: {DisplayName}, Route: {RoutePattern}, HTTP Methods: {HttpMethods}",
             routeEndpoint.DisplayName,
             routeEndpoint.RoutePattern.RawText,
-            string.Join(", ", routeEndpoint.Metadata.GetOrderedMetadata<HttpMethodMetadata>().SelectMany(m => m.HttpMethods))
+            string.Join(", ", httpMethods)
         );
     }
 }

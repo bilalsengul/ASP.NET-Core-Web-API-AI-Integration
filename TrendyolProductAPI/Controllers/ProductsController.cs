@@ -93,8 +93,7 @@ namespace TrendyolProductAPI.Controllers
             public string Url { get; set; }
         }
 
-        [HttpPost]
-        [Route("crawl")]
+        [HttpPost("crawl")]
         public async Task<IActionResult> CrawlProduct([FromBody] CrawlRequest request)
         {
             try
@@ -114,8 +113,7 @@ namespace TrendyolProductAPI.Controllers
             }
         }
 
-        [HttpPost]
-        [Route("transform/{sku}")]
+        [HttpPost("transform/{sku}")]
         public async Task<IActionResult> TransformProduct(string sku)
         {
             try

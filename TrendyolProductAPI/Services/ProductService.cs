@@ -98,16 +98,20 @@ namespace TrendyolProductAPI.Services
             var existingProduct = _products.FirstOrDefault(p => p.Sku == product.Sku);
             if (existingProduct != null)
             {
+                _logger.LogInformation("Removing existing product with SKU: {Sku}", existingProduct.Sku);
                 _products.Remove(existingProduct);
             }
             _products.Add(product);
+            _logger.LogInformation("Product saved successfully. Total products in list: {Count}", _products.Count);
+            _logger.LogInformation("Products in list: {Products}", string.Join(", ", _products.Select(p => p.Sku)));
             return await Task.FromResult(product);
         }
 
         public async Task<IEnumerable<Product>> CrawlProductAsync(string url)
         {
             _logger.LogInformation("Crawling product from URL: {Url}", url);
-            // For now, return a mock product since we're not implementing actual crawling
+            
+            // Create a mock product with variants
             var mockProduct = new Product
             {
                 Sku = "CRAWLED-001",
@@ -115,8 +119,48 @@ namespace TrendyolProductAPI.Services
                 Brand = "Test Brand",
                 OriginalPrice = 100.00m,
                 DiscountedPrice = 90.00m,
-                Images = new List<string> { "https://example.com/image.jpg" }
+                Images = new List<string> { "https://example.com/image.jpg" },
+                Variants = new List<Product>
+                {
+                    new Product
+                    {
+                        Sku = "CRAWLED-001-BLACK",
+                        Name = "Crawled Product - Black",
+                        Color = "Black",
+                        OriginalPrice = 100.00m,
+                        DiscountedPrice = 90.00m,
+                        Images = new List<string> { "https://example.com/image-black.jpg" }
+                    },
+                    new Product
+                    {
+                        Sku = "CRAWLED-001-WHITE",
+                        Name = "Crawled Product - White",
+                        Color = "White",
+                        OriginalPrice = 100.00m,
+                        DiscountedPrice = 90.00m,
+                        Images = new List<string> { "https://example.com/image-white.jpg" }
+                    }
+                }
             };
+
+            _logger.LogInformation("Created mock product with SKU: {Sku}", mockProduct.Sku);
+            _logger.LogInformation("Mock product has {VariantCount} variants", mockProduct.Variants?.Count ?? 0);
+
+            // Save only the main product (which includes variants)
+            await SaveProductAsync(mockProduct);
+
+            // Verify the product was saved
+            var savedProduct = await GetProductBySkuAsync(mockProduct.Sku);
+            if (savedProduct != null)
+            {
+                _logger.LogInformation("Successfully retrieved saved product with SKU: {Sku}", savedProduct.Sku);
+                _logger.LogInformation("Saved product has {VariantCount} variants", savedProduct.Variants?.Count ?? 0);
+            }
+            else
+            {
+                _logger.LogError("Failed to retrieve saved product with SKU: {Sku}", mockProduct.Sku);
+            }
+
             return await Task.FromResult(new List<Product> { mockProduct });
         }
 
