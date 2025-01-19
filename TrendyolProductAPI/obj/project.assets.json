@@ -227,7 +227,7 @@
           }
         }
       },
-      "OpenAI/1.10.0": {
+      "OpenAI/1.7.2": {
         "type": "package",
         "dependencies": {
           "Microsoft.Bcl.AsyncInterfaces": "1.1.1",
@@ -815,10 +815,10 @@
         "packageIcon.png"
       ]
     },
-    "OpenAI/1.10.0": {
-      "sha512": "XITFdMPZXa4otWfA2oBZSaFkiEy+bK8DqmERtG8PKQO+15IWL+Rf27sVlX0vQd+CCliZGW5ZqtaZiPWd7uVHZw==",
+    "OpenAI/1.7.2": {
+      "sha512": "veUa6xE+8ThjNLBCM75ZOOE0y72UNB/OQMsodOy+hTajZKV8So7s0dwx8x0kMqjgaiLMxC2grKGdQ+CVBl98sA==",
       "type": "package",
-      "path": "openai/1.10.0",
+      "path": "openai/1.7.2",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -826,7 +826,7 @@
         "lib/netstandard2.0/OpenAI_API.dll",
         "lib/netstandard2.0/OpenAI_API.xml",
         "nuget_logo.png",
-        "openai.1.10.0.nupkg.sha512",
+        "openai.1.7.2.nupkg.sha512",
         "openai.nuspec"
       ]
     },
@@ -991,7 +991,7 @@
     "net9.0": [
       "HtmlAgilityPack >= 1.11.54",
       "Microsoft.AspNetCore.OpenApi >= 9.0.0",
-      "OpenAI >= 1.10.0",
+      "OpenAI >= 1.7.2",
       "Swashbuckle.AspNetCore >= 6.5.0"
     ]
   },
@@ -1049,7 +1049,7 @@
           },
           "OpenAI": {
             "target": "Package",
-            "version": "[1.10.0, )"
+            "version": "[1.7.2, )"
           },
           "Swashbuckle.AspNetCore": {
             "target": "Package",

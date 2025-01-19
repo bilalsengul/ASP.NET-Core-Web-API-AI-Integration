@@ -116,43 +116,34 @@ namespace TrendyolProductAPI.Services
 
                 _logger.LogInformation("Starting product transformation for SKU: {sku}", sku);
 
-                // Prepare the message for OpenAI
-                var messages = new List<ChatMessage>
-                {
-                    new ChatMessage(ChatMessageRole.System, "You are a product translation assistant. Convert product information to English and provide output in JSON format."),
-                    new ChatMessage(ChatMessageRole.User, $"Translate and enhance the following product information to English and assign a score between 0-100 based on content quality:\n\n" +
-                                                        $"Name: {product.Name}\n" +
-                                                        $"Description: {product.Description}\n" +
-                                                        $"Brand: {product.Brand}\n" +
-                                                        $"Number of Images: {product.Images.Count}\n\n" +
-                                                        "Please provide the response in the following JSON format:\n" +
-                                                        "{\n" +
-                                                        "  \"name\": \"translated name\",\n" +
-                                                        "  \"description\": \"translated description\",\n" +
-                                                        "  \"brand\": \"translated brand\",\n" +
-                                                        "  \"score\": 85\n" +
-                                                        "}")
-                };
-
                 _logger.LogInformation("Sending request to OpenAI");
-
+                
+                // Create a new conversation
                 var chat = _openAI.Chat.CreateConversation();
-                foreach (var message in messages)
-                {
-                    chat.AppendMessage(message.Role.ToString(), message.Content);
-                }
+                
+                // Add the messages
+                chat.AppendSystemMessage("You are a product translation assistant. Convert product information to English and provide output in JSON format.");
+                chat.AppendUserInput($"Translate and enhance the following product information to English and assign a score between 0-100 based on content quality:\n\n" +
+                                   $"Name: {product.Name}\n" +
+                                   $"Description: {product.Description}\n" +
+                                   $"Brand: {product.Brand}\n" +
+                                   $"Number of Images: {product.Images.Count}\n\n" +
+                                   "Please provide the response in the following JSON format:\n" +
+                                   "{\n" +
+                                   "  \"name\": \"translated name\",\n" +
+                                   "  \"description\": \"translated description\",\n" +
+                                   "  \"brand\": \"translated brand\",\n" +
+                                   "  \"score\": 85\n" +
+                                   "}");
 
-                chat.Model = "gpt-4";
-                chat.MaxTokens = 1000;
-                chat.Temperature = 0.7;
-
+                // Get the response
                 var response = await chat.GetResponseFromChatbotAsync();
                 _logger.LogInformation("Received OpenAI response: {response}", response);
 
                 if (string.IsNullOrEmpty(response))
                 {
-                    _logger.LogError("No response received from OpenAI");
-                    throw new Exception("Failed to get response from OpenAI");
+                    _logger.LogError("Empty response received from OpenAI");
+                    throw new Exception("Empty response from OpenAI");
                 }
 
                 // Parse the response and update the product
