@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Caching.Memory;
-using System.Collections.Concurrent;
+using System.Collections;
 using System.Reflection;
 
 namespace TrendyolProductAPI.Extensions
@@ -9,7 +9,7 @@ namespace TrendyolProductAPI.Extensions
         public static IEnumerable<string> GetKeys<T>(this IMemoryCache cache)
         {
             var field = typeof(MemoryCache).GetProperty("EntriesCollection", BindingFlags.NonPublic | BindingFlags.Instance);
-            var collection = field?.GetValue(cache) as ICollection;
+            var collection = field?.GetValue(cache) as IEnumerable;
             
             if (collection == null) return Enumerable.Empty<string>();
             

@@ -102,7 +102,7 @@ namespace TrendyolProductAPI.Services
             }
         }
 
-        public async Task<Product> TransformProductAsync(string sku)
+        public async Task<Product?> TransformProductAsync(string sku)
         {
             var product = await GetProductBySkuAsync(sku);
             if (product == null)
@@ -131,11 +131,13 @@ namespace TrendyolProductAPI.Services
                 };
 
                 var result = await _openAI.Completions.CreateCompletionAsync(completionRequest);
+                if (result?.Completions == null || result.Completions.Count == 0)
+                    return null;
+
                 var response = result.Completions[0].Text;
 
                 // Parse the response and update the product
-                // Note: This is a simplified version. You might want to add proper JSON parsing
-                var transformedProduct = new Product
+                return new Product
                 {
                     Name = ExtractValue(response, "name"),
                     Description = ExtractValue(response, "description"),
@@ -149,8 +151,6 @@ namespace TrendyolProductAPI.Services
                     Images = product.Images,
                     Score = ExtractScore(response)
                 };
-
-                return transformedProduct;
             }
             catch (Exception ex)
             {
@@ -161,7 +161,7 @@ namespace TrendyolProductAPI.Services
 
         public async Task<List<Product>> GetAllProductsAsync()
         {
-            // Get all cached products
+            await Task.CompletedTask;
             var products = new List<Product>();
             var cacheKeys = _cache.GetKeys<string>().Where(k => k.StartsWith(CACHE_KEY_PREFIX));
             
@@ -176,14 +176,18 @@ namespace TrendyolProductAPI.Services
             return products;
         }
 
-        public Task<Product?> GetProductBySkuAsync(string sku)
+        public async Task<Product?> GetProductBySkuAsync(string sku)
         {
+            await Task.CompletedTask;
             _cache.TryGetValue($"{CACHE_KEY_PREFIX}{sku}", out Product? product);
-            return Task.FromResult(product);
+            return product;
         }
 
         private string ExtractValue(string response, string key)
         {
+            if (string.IsNullOrEmpty(response) || string.IsNullOrEmpty(key))
+                return string.Empty;
+
             var match = Regex.Match(response, $@"""{key}""\s*:\s*""([^""]+)""", RegexOptions.IgnoreCase);
             return match.Success ? match.Groups[1].Value : string.Empty;
         }

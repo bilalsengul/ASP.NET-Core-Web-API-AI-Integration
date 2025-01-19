@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "5GMYzQLzOAg=",
+  "dgSpecHash": "p1k1AAyQuWfUrmGcr21zOUlhQxBxK2nS1D4pDV9DmF1/d8cCGwRlad/1CwiKVub/WJnZWY/ygpwD+XTesqLKEQ==",
   "success": true,
   "projectFilePath": "/Users/bilalsengul/Desktop/CURSOR/Case U/ASP.NET-Core-Web-API---AI-Integration/TrendyolProductAPI/TrendyolProductAPI.csproj",
   "expectedPackageFiles": [
@@ -25,10 +25,7 @@
     "/Users/bilalsengul/.nuget/packages/swashbuckle.aspnetcore.swaggergen/6.5.0/swashbuckle.aspnetcore.swaggergen.6.5.0.nupkg.sha512",
     "/Users/bilalsengul/.nuget/packages/swashbuckle.aspnetcore.swaggerui/6.5.0/swashbuckle.aspnetcore.swaggerui.6.5.0.nupkg.sha512",
     "/Users/bilalsengul/.nuget/packages/system.memory/4.5.0/system.memory.4.5.0.nupkg.sha512",
-    "/Users/bilalsengul/.nuget/packages/system.runtime.compilerservices.unsafe/4.5.0/system.runtime.compilerservices.unsafe.4.5.0.nupkg.sha512",
-    "/Users/bilalsengul/.nuget/packages/microsoft.netcore.app.ref/8.0.11/microsoft.netcore.app.ref.8.0.11.nupkg.sha512",
-    "/Users/bilalsengul/.nuget/packages/microsoft.aspnetcore.app.ref/8.0.11/microsoft.aspnetcore.app.ref.8.0.11.nupkg.sha512",
-    "/Users/bilalsengul/.nuget/packages/microsoft.netcore.app.host.osx-arm64/8.0.11/microsoft.netcore.app.host.osx-arm64.8.0.11.nupkg.sha512"
+    "/Users/bilalsengul/.nuget/packages/system.runtime.compilerservices.unsafe/4.5.0/system.runtime.compilerservices.unsafe.4.5.0.nupkg.sha512"
   ],
   "logs": []
 }

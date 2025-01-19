@@ -7,8 +7,8 @@ namespace TrendyolProductAPI.Services
     public interface IProductService
     {
         Task<List<Product>> CrawlProductAsync(string productUrl);
-        Task<Product> TransformProductAsync(string sku);
+        Task<Product?> TransformProductAsync(string sku);
         Task<List<Product>> GetAllProductsAsync();
-        Task<Product> GetProductBySkuAsync(string sku);
+        Task<Product?> GetProductBySkuAsync(string sku);
     }
 } 
