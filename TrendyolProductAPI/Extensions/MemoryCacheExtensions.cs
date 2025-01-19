@@ -1,30 +1,26 @@
-using Microsoft.Extensions.Caching.Memory;
-using System.Collections;
+using System.Collections.Concurrent;
 using System.Reflection;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace TrendyolProductAPI.Extensions
 {
     public static class MemoryCacheExtensions
     {
+        private static readonly ConcurrentDictionary<string, bool> _keys = new ConcurrentDictionary<string, bool>();
+
+        public static void AddKey(this IMemoryCache cache, string key)
+        {
+            _keys.TryAdd(key, true);
+        }
+
+        public static void RemoveKey(this IMemoryCache cache, string key)
+        {
+            _keys.TryRemove(key, out _);
+        }
+
         public static IEnumerable<string> GetKeys<T>(this IMemoryCache cache)
         {
-            var field = typeof(MemoryCache).GetProperty("EntriesCollection", BindingFlags.NonPublic | BindingFlags.Instance);
-            var collection = field?.GetValue(cache) as IEnumerable;
-            
-            if (collection == null) return Enumerable.Empty<string>();
-            
-            var items = new List<string>();
-            foreach (var item in collection)
-            {
-                var methodInfo = item.GetType().GetProperty("Key");
-                var key = methodInfo?.GetValue(item)?.ToString();
-                if (!string.IsNullOrEmpty(key))
-                {
-                    items.Add(key);
-                }
-            }
-            
-            return items;
+            return _keys.Keys;
         }
     }
 } 

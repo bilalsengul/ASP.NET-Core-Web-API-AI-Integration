@@ -88,11 +88,13 @@ namespace TrendyolProductAPI.Services
                     OriginalPrice = originalPrice,
                     DiscountedPrice = discountedPrice,
                     Images = images,
-                    Attributes = new List<ProductAttribute>() // You might want to extract attributes as well
+                    Attributes = new List<ProductAttribute>()
                 };
 
                 // Cache the product
-                _cache.Set($"{CACHE_KEY_PREFIX}{sku}", product);
+                var cacheKey = $"{CACHE_KEY_PREFIX}{sku}";
+                _cache.Set(cacheKey, product);
+                _cache.AddKey(cacheKey);
 
                 return new List<Product> { product };
             }
@@ -187,17 +189,35 @@ namespace TrendyolProductAPI.Services
         {
             await Task.CompletedTask;
             var products = new List<Product>();
-            var cacheKeys = _cache.GetKeys<string>().Where(k => k.StartsWith(CACHE_KEY_PREFIX));
             
-            foreach (var key in cacheKeys)
+            try
             {
-                if (_cache.TryGetValue(key, out Product? product) && product != null && product.IsSaved)
+                _logger.LogInformation("Retrieving all saved products");
+                
+                // Get all cache keys that start with the product prefix
+                var cacheKeys = _cache.GetKeys<string>().Where(k => k.StartsWith(CACHE_KEY_PREFIX));
+                _logger.LogInformation("Found {count} cache keys", cacheKeys.Count());
+                
+                foreach (var key in cacheKeys)
                 {
-                    products.Add(product);
+                    if (_cache.TryGetValue(key, out Product? product) && product != null)
+                    {
+                        _logger.LogInformation("Retrieved product with SKU: {sku}, IsSaved: {isSaved}", product.Sku, product.IsSaved);
+                        if (product.IsSaved)
+                        {
+                            products.Add(product);
+                        }
+                    }
                 }
+                
+                _logger.LogInformation("Retrieved {count} saved products", products.Count);
+                return products.OrderByDescending(p => p.Score).ToList();
             }
-            
-            return products.OrderByDescending(p => p.Score).ToList();
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving all products");
+                throw;
+            }
         }
 
         public async Task<Product?> GetProductBySkuAsync(string sku)
@@ -231,17 +251,27 @@ namespace TrendyolProductAPI.Services
             {
                 _logger.LogInformation("Saving product with SKU: {sku}", product.Sku);
                 
-                // Store in cache with a longer expiration time for saved products
-                var cacheEntryOptions = new MemoryCacheEntryOptions()
-                    .SetSlidingExpiration(TimeSpan.FromDays(30));
-                
                 // Add a flag to indicate this is a saved product
                 product.IsSaved = true;
                 
-                _cache.Set($"{CACHE_KEY_PREFIX}{product.Sku}", product, cacheEntryOptions);
+                // Store in cache with a longer expiration time for saved products
+                var cacheEntryOptions = new MemoryCacheEntryOptions()
+                    .SetSlidingExpiration(TimeSpan.FromDays(30))
+                    .SetPriority(CacheItemPriority.NeverRemove);
                 
-                _logger.LogInformation("Successfully saved product with SKU: {sku}", product.Sku);
-                return product;
+                var cacheKey = $"{CACHE_KEY_PREFIX}{product.Sku}";
+                _cache.Set(cacheKey, product, cacheEntryOptions);
+                _cache.AddKey(cacheKey);
+                
+                // Verify the product was saved
+                if (_cache.TryGetValue(cacheKey, out Product? savedProduct) && savedProduct != null)
+                {
+                    _logger.LogInformation("Successfully saved product with SKU: {sku}, IsSaved: {isSaved}", 
+                        savedProduct.Sku, savedProduct.IsSaved);
+                    return savedProduct;
+                }
+                
+                throw new Exception($"Failed to verify saved product with SKU: {product.Sku}");
             }
             catch (Exception ex)
             {
