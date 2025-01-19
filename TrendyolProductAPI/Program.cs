@@ -7,11 +7,12 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+// Configure Swagger
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Trendyol Product API", Version = "v1" });
     
-    // Add API Key authentication to Swagger
     c.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
     {
         Description = "API Key authentication using the 'X-API-Key' header",
@@ -51,8 +52,14 @@ builder.Services.AddScoped<IProductService, ProductService>();
 // Configure logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
+builder.Logging.SetMinimumLevel(LogLevel.Information);
 
 var app = builder.Build();
+
+// Log configuration values
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+logger.LogInformation("API Key configured: {exists}", !string.IsNullOrEmpty(app.Configuration["ApiKey"]));
+logger.LogInformation("OpenAI Key configured: {exists}", !string.IsNullOrEmpty(app.Configuration["OpenAI:ApiKey"]));
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

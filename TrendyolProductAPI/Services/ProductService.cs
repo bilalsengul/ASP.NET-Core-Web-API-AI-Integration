@@ -6,6 +6,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OpenAI_API;
+using OpenAI_API.Chat;
 using TrendyolProductAPI.Models;
 using TrendyolProductAPI.Extensions;
 using HtmlAgilityPack;
@@ -104,40 +105,58 @@ namespace TrendyolProductAPI.Services
 
         public async Task<Product?> TransformProductAsync(string sku)
         {
-            var product = await GetProductBySkuAsync(sku);
-            if (product == null)
-                return null;
-
             try
             {
-                // Prepare the prompt for OpenAI
-                var prompt = $"Translate and enhance the following product information to English and assign a score between 0-100 based on content quality:\n\n" +
-                           $"Name: {product.Name}\n" +
-                           $"Description: {product.Description}\n" +
-                           $"Brand: {product.Brand}\n" +
-                           $"Number of Images: {product.Images.Count}\n\n" +
-                           "Please provide:\n" +
-                           "1. Translated name (make it SEO-friendly)\n" +
-                           "2. Translated description (make it detailed and SEO-friendly)\n" +
-                           "3. Translated brand\n" +
-                           "4. Score (0-100) based on name clarity, description detail, image count, and overall content quality\n" +
-                           "Format: JSON";
-
-                var completionRequest = new OpenAI_API.Completions.CompletionRequest
+                var product = await GetProductBySkuAsync(sku);
+                if (product == null)
                 {
-                    Prompt = prompt,
-                    Model = "gpt-4-turbo-preview",
-                    MaxTokens = 1000
+                    _logger.LogWarning("Product not found with SKU: {sku}", sku);
+                    return null;
+                }
+
+                _logger.LogInformation("Starting product transformation for SKU: {sku}", sku);
+
+                // Prepare the message for OpenAI
+                var messages = new List<ChatMessage>
+                {
+                    new ChatMessage(ChatMessageRole.System, "You are a product translation assistant. Convert product information to English and provide output in JSON format."),
+                    new ChatMessage(ChatMessageRole.User, $"Translate and enhance the following product information to English and assign a score between 0-100 based on content quality:\n\n" +
+                                                        $"Name: {product.Name}\n" +
+                                                        $"Description: {product.Description}\n" +
+                                                        $"Brand: {product.Brand}\n" +
+                                                        $"Number of Images: {product.Images.Count}\n\n" +
+                                                        "Please provide the response in the following JSON format:\n" +
+                                                        "{\n" +
+                                                        "  \"name\": \"translated name\",\n" +
+                                                        "  \"description\": \"translated description\",\n" +
+                                                        "  \"brand\": \"translated brand\",\n" +
+                                                        "  \"score\": 85\n" +
+                                                        "}")
                 };
 
-                var result = await _openAI.Completions.CreateCompletionAsync(completionRequest);
-                if (result?.Completions == null || result.Completions.Count == 0)
-                    return null;
+                _logger.LogInformation("Sending request to OpenAI");
 
-                var response = result.Completions[0].Text;
+                var chat = _openAI.Chat.CreateConversation();
+                foreach (var message in messages)
+                {
+                    chat.AppendMessage(message.Role.ToString(), message.Content);
+                }
+
+                chat.Model = "gpt-4";
+                chat.MaxTokens = 1000;
+                chat.Temperature = 0.7;
+
+                var response = await chat.GetResponseFromChatbotAsync();
+                _logger.LogInformation("Received OpenAI response: {response}", response);
+
+                if (string.IsNullOrEmpty(response))
+                {
+                    _logger.LogError("No response received from OpenAI");
+                    throw new Exception("Failed to get response from OpenAI");
+                }
 
                 // Parse the response and update the product
-                return new Product
+                var transformedProduct = new Product
                 {
                     Name = ExtractValue(response, "name"),
                     Description = ExtractValue(response, "description"),
@@ -151,6 +170,17 @@ namespace TrendyolProductAPI.Services
                     Images = product.Images,
                     Score = ExtractScore(response)
                 };
+
+                if (string.IsNullOrEmpty(transformedProduct.Name) || 
+                    string.IsNullOrEmpty(transformedProduct.Description) || 
+                    string.IsNullOrEmpty(transformedProduct.Brand))
+                {
+                    _logger.LogError("Failed to extract required fields from OpenAI response");
+                    throw new Exception("Failed to parse OpenAI response");
+                }
+
+                _logger.LogInformation("Successfully transformed product with SKU: {sku}", sku);
+                return transformedProduct;
             }
             catch (Exception ex)
             {
