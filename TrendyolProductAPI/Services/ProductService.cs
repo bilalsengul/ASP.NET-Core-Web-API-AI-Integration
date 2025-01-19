@@ -12,6 +12,7 @@ using TrendyolProductAPI.Extensions;
 using HtmlAgilityPack;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace TrendyolProductAPI.Services
 {
@@ -66,8 +67,75 @@ namespace TrendyolProductAPI.Services
                 var sizeSelector = doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'size-selector')]");
                 
                 // Get all color variants
-                var colorVariants = doc.DocumentNode.SelectNodes("//div[contains(@class, 'slicing-attribute')]//div[contains(@class, 'sp-itm')]");
+                var colorVariants = new List<Product>();
+                var variantSlider = doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'styles-module_slider')]");
                 
+                if (variantSlider != null)
+                {
+                    var variantLinks = variantSlider.SelectNodes(".//a[contains(@class, 'styles-module_item')]");
+                    if (variantLinks != null)
+                    {
+                        foreach (var link in variantLinks)
+                        {
+                            try
+                            {
+                                var variantUrl = link.GetAttributeValue("href", "");
+                                var variantColor = link.SelectSingleNode(".//div[contains(@class, 'styles-module_title')]")?.InnerText.Trim();
+                                var variantImage = link.SelectSingleNode(".//img")?.GetAttributeValue("src", "");
+                                var isSelected = link.GetAttributeValue("class", "").Contains("selected");
+
+                                if (!string.IsNullOrEmpty(variantUrl))
+                                {
+                                    // Convert relative URL to absolute
+                                    if (!variantUrl.StartsWith("http"))
+                                    {
+                                        variantUrl = "https://www.trendyol.com" + variantUrl;
+                                    }
+
+                                    // Extract SKU from URL
+                                    var variantSkuMatch = Regex.Match(variantUrl, @"p-(\d+)");
+                                    var variantSku = variantSkuMatch.Success ? variantSkuMatch.Groups[1].Value : null;
+
+                                    if (!string.IsNullOrEmpty(variantSku))
+                                    {
+                                        // Convert thumbnail URL to full-size image URL
+                                        if (!string.IsNullOrEmpty(variantImage))
+                                        {
+                                            variantImage = variantImage.Replace("/mnresize/128/192/", "/mnresize/1200/1800/");
+                                        }
+
+                                        var variant = new Product
+                                        {
+                                            Sku = variantSku,
+                                            ParentSku = baseSku,
+                                            Color = variantColor,
+                                            Images = new List<string> { variantImage },
+                                            IsMainVariant = isSelected,
+                                            Attributes = new List<ProductAttribute>()
+                                        };
+
+                                        if (!string.IsNullOrEmpty(variantColor))
+                                        {
+                                            variant.Attributes.Add(new ProductAttribute
+                                            {
+                                                Name = "color",
+                                                Value = variantColor
+                                            });
+                                        }
+
+                                        colorVariants.Add(variant);
+                                        _logger.LogInformation("Added color variant: {color} with SKU: {sku}", variantColor, variantSku);
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Error processing color variant link");
+                            }
+                        }
+                    }
+                }
+
                 // Get all size variants
                 var sizeVariants = doc.DocumentNode.SelectNodes("//div[contains(@class, 'size-variant-wrapper')]//div[contains(@class, 'variants')]//a");
 
@@ -160,73 +228,274 @@ namespace TrendyolProductAPI.Services
         {
             try
             {
-                // Extract product information using HTML nodes
+                // Extract basic product info
                 var name = doc.DocumentNode.SelectSingleNode("//h1[@class='pr-new-br']")?.InnerText.Trim();
                 var brand = doc.DocumentNode.SelectSingleNode("//h1[@class='pr-new-br']/a")?.InnerText.Trim();
-                var description = doc.DocumentNode.SelectSingleNode("//div[@class='product-description']")?.InnerText.Trim();
+                var category = doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'breadcrumb')]/div[last()]")?.InnerText.Trim();
+
+                // Extract all product images with improved selectors
+                var images = new List<string>();
+                var sliderImages = doc.DocumentNode.SelectNodes("//div[contains(@class, 'product-slide')]//img") ??
+                                  doc.DocumentNode.SelectNodes("//div[contains(@class, 'gallery-modal-content')]//img") ??
+                                  doc.DocumentNode.SelectNodes("//div[contains(@class, 'base-product-image')]//img");
+
+                if (sliderImages != null)
+                {
+                    foreach (var img in sliderImages)
+                    {
+                        var src = img.GetAttributeValue("src", "");
+                        if (!string.IsNullOrEmpty(src))
+                        {
+                            // Convert thumbnail URL to full-size image URL
+                            src = src.Replace("/mnresize/128/192/", "/mnresize/1200/1800/")
+                                     .Replace("/mnresize/50/75/", "/mnresize/1200/1800/");
+                            if (!images.Contains(src))
+                            {
+                                images.Add(src);
+                            }
+                        }
+                    }
+                }
+
+                // Extract color variants with improved selectors
+                var colorVariants = new List<Product>();
+                var variantSlider = doc.DocumentNode.SelectNodes("//div[contains(@class, 'slicing-attributes')]//div[contains(@class, 'sp-itm')]");
                 
-                // Extract color/variant information
-                var selectedVariant = doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'selected')]//span")?.InnerText.Trim();
-                
+                if (variantSlider != null)
+                {
+                    foreach (var variant in variantSlider)
+                    {
+                        try
+                        {
+                            var variantUrl = variant.SelectSingleNode(".//a")?.GetAttributeValue("href", "");
+                            var variantColor = variant.SelectSingleNode(".//div[contains(@class, 'variants')]//span")?.InnerText.Trim();
+                            var variantImage = variant.SelectSingleNode(".//img")?.GetAttributeValue("src", "");
+                            var isSelected = variant.GetAttributeValue("class", "").Contains("selected");
+
+                            if (!string.IsNullOrEmpty(variantUrl))
+                            {
+                                // Convert relative URL to absolute
+                                if (!variantUrl.StartsWith("http"))
+                                {
+                                    variantUrl = "https://www.trendyol.com" + variantUrl;
+                                }
+
+                                // Extract SKU from URL
+                                var variantSkuMatch = Regex.Match(variantUrl, @"p-(\d+)");
+                                var variantSku = variantSkuMatch.Success ? variantSkuMatch.Groups[1].Value : null;
+
+                                if (!string.IsNullOrEmpty(variantSku))
+                                {
+                                    // Convert thumbnail URL to full-size image URL
+                                    if (!string.IsNullOrEmpty(variantImage))
+                                    {
+                                        variantImage = variantImage.Replace("/mnresize/128/192/", "/mnresize/1200/1800/")
+                                                                 .Replace("/mnresize/50/75/", "/mnresize/1200/1800/");
+                                    }
+
+                                    var variant = new Product
+                                    {
+                                        Sku = variantSku,
+                                        ParentSku = parentSku ?? sku,
+                                        Color = variantColor,
+                                        Images = new List<string> { variantImage },
+                                        IsMainVariant = isSelected,
+                                        Attributes = new List<ProductAttribute>()
+                                    };
+
+                                    if (!string.IsNullOrEmpty(variantColor))
+                                    {
+                                        variant.Attributes.Add(new ProductAttribute
+                                        {
+                                            Name = "color",
+                                            Value = variantColor
+                                        });
+                                    }
+
+                                    colorVariants.Add(variant);
+                                    _logger.LogInformation("Added color variant: {color} with SKU: {sku}", variantColor, variantSku);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error processing color variant");
+                        }
+                    }
+                }
+
+                // Extract size variants
+                var sizeVariants = new List<Product>();
+                var sizeNodes = doc.DocumentNode.SelectNodes("//div[contains(@class, 'size-variant-wrapper')]//div[contains(@class, 'sp-itm')]");
+                if (sizeNodes != null)
+                {
+                    foreach (var sizeNode in sizeNodes)
+                    {
+                        var size = sizeNode.InnerText.Trim();
+                        var isAvailable = !sizeNode.GetAttributeValue("class", "").Contains("disabled");
+                        var isSelected = sizeNode.GetAttributeValue("class", "").Contains("selected");
+                        
+                        if (isAvailable)
+                        {
+                            var sizeVariant = new Product
+                            {
+                                Sku = $"{sku}-{size.ToLower().Replace(" ", "-")}",
+                                ParentSku = sku,
+                                Size = size,
+                                IsMainVariant = isSelected,
+                                Attributes = new List<ProductAttribute>
+                                {
+                                    new ProductAttribute 
+                                    { 
+                                        Name = "size",
+                                        Value = size 
+                                    }
+                                }
+                            };
+                            sizeVariants.Add(sizeVariant);
+                        }
+                    }
+                }
+
                 // Extract prices
-                var priceNode = doc.DocumentNode.SelectSingleNode("//span[@class='prc-dsc']");
-                var originalPriceNode = doc.DocumentNode.SelectSingleNode("//span[@class='prc-org']");
+                var priceNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'featured-prices')]//span[@class='prc-dsc']") ??
+                               doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'product-price-container')]//span[@class='prc-dsc']");
+                var originalPriceNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'featured-prices')]//span[@class='prc-org']") ??
+                                       doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'product-price-container')]//span[@class='prc-org']");
 
                 decimal discountedPrice = 0;
                 decimal originalPrice = 0;
 
                 if (priceNode != null)
                 {
-                    decimal.TryParse(priceNode.InnerText.Replace("TL", "").Trim(), out discountedPrice);
+                    var priceText = priceNode.InnerText.Trim()
+                        .Replace("TL", "")
+                        .Replace(",", ".")
+                        .Trim();
+                    decimal.TryParse(priceText, NumberStyles.Any, CultureInfo.InvariantCulture, out discountedPrice);
+                    discountedPrice *= 100; // Convert to cents
                 }
 
                 if (originalPriceNode != null)
                 {
-                    decimal.TryParse(originalPriceNode.InnerText.Replace("TL", "").Trim(), out originalPrice);
+                    var priceText = originalPriceNode.InnerText.Trim()
+                        .Replace("TL", "")
+                        .Replace(",", ".")
+                        .Trim();
+                    decimal.TryParse(priceText, NumberStyles.Any, CultureInfo.InvariantCulture, out originalPrice);
+                    originalPrice *= 100; // Convert to cents
                 }
                 else
                 {
                     originalPrice = discountedPrice;
                 }
 
-                // Extract images
-                var images = doc.DocumentNode
-                    .SelectNodes("//img[@class='product-image']")?
-                    .Select(img => img.GetAttributeValue("src", ""))
-                    .Where(src => !string.IsNullOrEmpty(src))
-                    .ToList() ?? new List<string>();
-
-                // Extract attributes (including color/size variants)
+                // Extract attributes and specifications
                 var attributes = new List<ProductAttribute>();
                 
-                // Add color/variant as an attribute if available
-                if (!string.IsNullOrEmpty(selectedVariant))
+                // Extract specifications from the product details table
+                var specRows = doc.DocumentNode.SelectNodes("//table[contains(@class, 'detail-attr-table')]//tr") ??
+                              doc.DocumentNode.SelectNodes("//div[contains(@class, 'detail-attr-container')]//tr");
+                
+                if (specRows != null)
                 {
-                    attributes.Add(new ProductAttribute 
-                    { 
-                        Key = "color",
-                        Name = selectedVariant 
-                    });
-                }
-
-                // Extract other attributes
-                var attributeNodes = doc.DocumentNode.SelectNodes("//div[contains(@class, 'prop-item')]");
-                if (attributeNodes != null)
-                {
-                    foreach (var attrNode in attributeNodes)
+                    foreach (var row in specRows)
                     {
-                        var key = attrNode.SelectSingleNode(".//span[@class='prop-key']")?.InnerText.Trim();
-                        var value = attrNode.SelectSingleNode(".//span[@class='prop-value']")?.InnerText.Trim();
+                        var label = row.SelectSingleNode(".//th")?.InnerText.Trim() ?? 
+                                   row.SelectSingleNode(".//td[1]")?.InnerText.Trim();
+                        var value = row.SelectSingleNode(".//td[last()]")?.InnerText.Trim();
                         
-                        if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(value))
+                        if (!string.IsNullOrEmpty(label) && !string.IsNullOrEmpty(value))
                         {
+                            label = label.ToLower()
+                                .Replace(" ", "_")
+                                .Replace("ı", "i")
+                                .Replace("ğ", "g")
+                                .Replace("ü", "u")
+                                .Replace("ş", "s")
+                                .Replace("ö", "o")
+                                .Replace("ç", "c");
+
                             attributes.Add(new ProductAttribute 
                             { 
-                                Key = key.ToLowerInvariant(),
-                                Name = value 
+                                Name = label,
+                                Value = value 
                             });
                         }
                     }
+                }
+
+                // Extract features
+                var features = new List<string>();
+                var featureNodes = doc.DocumentNode.SelectNodes("//div[contains(@class, 'detail-desc-list')]//li") ??
+                                  doc.DocumentNode.SelectNodes("//div[contains(@class, 'product-information-content')]//li") ??
+                                  doc.DocumentNode.SelectNodes("//div[contains(@class, 'product-feature-content')]//li");
+                
+                if (featureNodes != null)
+                {
+                    foreach (var node in featureNodes)
+                    {
+                        var featureText = node.InnerText.Trim()
+                            .Replace("Detaylı bilgi için tıklayın.", "")
+                            .Replace("\n", " ")
+                            .Trim();
+                        
+                        if (!string.IsNullOrEmpty(featureText) && 
+                            !featureText.Contains("tarafından gönderilecektir") &&
+                            !featureText.Contains("TRENDYOL PAZARYERİ"))
+                        {
+                            features.Add(featureText);
+                        }
+                    }
+                }
+
+                // Get product description
+                var descriptionNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'product-information-content')]//p") ??
+                                     doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'detail-desc-text')]");
+                
+                if (descriptionNode != null)
+                {
+                    var description = descriptionNode.InnerText.Trim();
+                    if (!string.IsNullOrEmpty(description))
+                    {
+                        attributes.Add(new ProductAttribute
+                        {
+                            Name = "original_description",
+                            Value = description
+                        });
+                    }
+                }
+
+                if (features.Any())
+                {
+                    attributes.Add(new ProductAttribute 
+                    { 
+                        Name = "features",
+                        Value = string.Join("|", features)
+                    });
+                }
+
+                // Extract review and favorite counts
+                var reviewCountNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'pr-rnr-cn')]//span");
+                if (reviewCountNode != null)
+                {
+                    var reviewCount = reviewCountNode.InnerText.Trim().Replace("(", "").Replace(")", "");
+                    attributes.Add(new ProductAttribute
+                    {
+                        Name = "review_count",
+                        Value = reviewCount
+                    });
+                }
+
+                var favoriteCountNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'fv-dt')]//span");
+                if (favoriteCountNode != null)
+                {
+                    var favoriteCount = favoriteCountNode.InnerText.Trim();
+                    attributes.Add(new ProductAttribute
+                    {
+                        Name = "favorite_count",
+                        Value = favoriteCount
+                    });
                 }
 
                 if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(brand))
@@ -235,22 +504,48 @@ namespace TrendyolProductAPI.Services
                     return null;
                 }
 
-                return new Product
+                var mainProduct = new Product
                 {
                     Name = name,
-                    Description = description,
+                    Description = null, // Will be added by AI transformation
                     Sku = sku,
                     ParentSku = parentSku,
                     Brand = brand,
+                    Category = category,
                     OriginalPrice = originalPrice,
                     DiscountedPrice = discountedPrice,
                     Images = images,
-                    Attributes = attributes
+                    Attributes = attributes,
+                    Variants = colorVariants.Concat(sizeVariants).ToList(),
+                    IsMainVariant = true
                 };
+
+                // Add current color if available
+                var selectedColor = doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'slc-title')]//h2/span")?.InnerText.Trim() ??
+                                  doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'selected-variant-text')]")?.InnerText.Trim();
+                if (!string.IsNullOrEmpty(selectedColor))
+                {
+                    mainProduct.Color = selectedColor;
+                    AddColorAttribute(mainProduct, selectedColor);
+                }
+
+                // Add current size if available
+                var selectedSize = doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'size-variant-wrapper')]//div[contains(@class, 'sp-itm selected')]")?.InnerText.Trim();
+                if (!string.IsNullOrEmpty(selectedSize))
+                {
+                    mainProduct.Size = selectedSize;
+                    mainProduct.Attributes.Add(new ProductAttribute 
+                    { 
+                        Name = "size",
+                        Value = selectedSize 
+                    });
+                }
+
+                return mainProduct;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error extracting product details for SKU: {sku}", sku);
+                _logger.LogError(ex, "Error extracting product details for SKU: {Sku}", sku);
                 return null;
             }
         }
@@ -261,8 +556,8 @@ namespace TrendyolProductAPI.Services
             {
                 product.Attributes.Add(new ProductAttribute 
                 { 
-                    Key = "color",
-                    Name = color 
+                    Name = "color",
+                    Value = color 
                 });
             }
         }
@@ -293,8 +588,8 @@ namespace TrendyolProductAPI.Services
                             
                             sizeVariantProduct.Attributes.Add(new ProductAttribute 
                             { 
-                                Key = "size",
-                                Name = size 
+                                Name = "size",
+                                Value = size 
                             });
                             
                             products.Add(sizeVariantProduct);
@@ -327,19 +622,41 @@ namespace TrendyolProductAPI.Services
                 var chat = _openAI.Chat.CreateConversation();
                 
                 // Add the messages
-                chat.AppendSystemMessage("You are a product translation assistant. Convert product information to English and provide output in JSON format.");
-                chat.AppendUserInput($"Translate and enhance the following product information to English and assign a score between 0-100 based on content quality:\n\n" +
-                                   $"Name: {product.Name}\n" +
-                                   $"Description: {product.Description}\n" +
-                                   $"Brand: {product.Brand}\n" +
-                                   $"Number of Images: {product.Images.Count}\n\n" +
-                                   "Please provide the response in the following JSON format:\n" +
-                                   "{\n" +
-                                   "  \"name\": \"translated name\",\n" +
-                                   "  \"description\": \"translated description\",\n" +
-                                   "  \"brand\": \"translated brand\",\n" +
-                                   "  \"score\": 85\n" +
-                                   "}");
+                chat.AppendSystemMessage(@"You are a professional product description writer specializing in fashion and accessories. 
+Your task is to create detailed, engaging product descriptions that highlight:
+1. Key features and materials
+2. Design elements and style
+3. Functionality and use cases
+4. Target audience
+5. Unique selling points
+6. Color and aesthetic appeal
+7. Quality and craftsmanship
+
+Ensure descriptions are informative, engaging, and help customers visualize the product.");
+
+                // Prepare a detailed context for the AI
+                var productContext = $@"Product Details:
+Name: {product.Name}
+Brand: {product.Brand}
+Category: {product.Category ?? "Fashion Accessory"}
+Color: {product.Color ?? "Not specified"}
+Features: {(product.Attributes.FirstOrDefault(a => a.Name == "features")?.Value ?? "Not specified")}
+Images Count: {product.Images.Count}
+Price Range: {(product.DiscountedPrice != product.OriginalPrice ? "Discounted" : "Regular")}
+
+Please transform this into English and create a detailed, marketing-friendly description that covers all aspects of the product.";
+
+                chat.AppendUserInput($@"Transform the following product information into a comprehensive English description:
+
+{productContext}
+
+Please provide the response in the following JSON format:
+{{
+    ""name"": ""professional product name"",
+    ""description"": ""detailed, multi-paragraph description that covers materials, design, features, and benefits"",
+    ""brand"": ""brand name in English"",
+    ""score"": rating between 0-100 based on content quality and completeness
+}}");
 
                 // Get the response
                 var response = await chat.GetResponseFromChatbotAsync();
@@ -364,7 +681,12 @@ namespace TrendyolProductAPI.Services
                     OriginalPrice = product.OriginalPrice,
                     DiscountedPrice = product.DiscountedPrice,
                     Images = product.Images,
-                    Score = ExtractScore(response)
+                    Score = ExtractScore(response),
+                    Color = product.Color,
+                    Size = product.Size,
+                    VariantId = product.VariantId,
+                    IsMainVariant = product.IsMainVariant,
+                    Variants = product.Variants
                 };
 
                 if (string.IsNullOrEmpty(transformedProduct.Name) || 

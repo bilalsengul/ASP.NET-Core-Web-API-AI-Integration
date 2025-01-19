@@ -8,6 +8,7 @@
     ".NETCoreApp,Version=v9.0": {
       "TrendyolProductAPI/1.0.0": {
         "dependencies": {
+          "AngleSharp": "1.2.0",
           "HtmlAgilityPack": "1.11.54",
           "Microsoft.AspNetCore.OpenApi": "9.0.0",
           "OpenAI": "1.7.2",
@@ -15,6 +16,14 @@
         },
         "runtime": {
           "TrendyolProductAPI.dll": {}
+        }
+      },
+      "AngleSharp/1.2.0": {
+        "runtime": {
+          "lib/net8.0/AngleSharp.dll": {
+            "assemblyVersion": "1.2.0.0",
+            "fileVersion": "1.2.0.0"
+          }
         }
       },
       "HtmlAgilityPack/1.11.54": {
@@ -165,6 +174,13 @@
       "type": "project",
       "serviceable": false,
       "sha512": ""
+    },
+    "AngleSharp/1.2.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-uF/PzSCVcb+b2nqVvHZbOqexoJ9R6QLjonugPf0PQl+0h7YKaFZeXyspctbHe5HGlx7/Iuk5BErtk+t63ac/ZA==",
+      "path": "anglesharp/1.2.0",
+      "hashPath": "anglesharp.1.2.0.nupkg.sha512"
     },
     "HtmlAgilityPack/1.11.54": {
       "type": "package",

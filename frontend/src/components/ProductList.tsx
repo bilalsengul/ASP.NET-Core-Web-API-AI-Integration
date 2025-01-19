@@ -15,14 +15,14 @@ import {
   IconButton,
   Tooltip,
   CardMedia,
-  Chip,
   Stack,
   Paper,
   Rating
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
-import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import StarIcon from '@mui/icons-material/Star';
 
 const ProductList: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -58,14 +58,14 @@ const ProductList: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
       <Paper elevation={0} sx={{ p: 3, backgroundColor: 'transparent' }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Box>
-            <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+            <Typography variant="h5" component="h1" gutterBottom fontWeight="bold">
               Saved Products
             </Typography>
-            <Typography variant="subtitle1" color="text.secondary">
+            <Typography variant="body2" color="text.secondary">
               {products.length} {products.length === 1 ? 'product' : 'products'} found
             </Typography>
           </Box>
@@ -76,8 +76,8 @@ const ProductList: React.FC = () => {
               variant="contained"
               startIcon={<ShoppingBagIcon />}
               sx={{ 
-                backgroundColor: 'primary.dark',
-                '&:hover': { backgroundColor: 'primary.main' }
+                backgroundColor: '#f27a1a',
+                '&:hover': { backgroundColor: '#d65a00' }
               }}
             >
               Add New Product
@@ -86,11 +86,10 @@ const ProductList: React.FC = () => {
               <IconButton 
                 onClick={fetchProducts} 
                 disabled={refreshing}
-                color="primary"
                 sx={{ 
-                  backgroundColor: 'primary.light',
-                  '&:hover': { backgroundColor: 'primary.main' },
-                  '&:disabled': { backgroundColor: 'action.disabledBackground' }
+                  backgroundColor: '#f8f8f8',
+                  '&:hover': { backgroundColor: '#e5e5e5' },
+                  '&:disabled': { backgroundColor: '#f8f8f8' }
                 }}
               >
                 <RefreshIcon />
@@ -111,7 +110,7 @@ const ProductList: React.FC = () => {
             sx={{ 
               p: 6, 
               textAlign: 'center',
-              backgroundColor: 'grey.50',
+              backgroundColor: '#f8f8f8',
               borderRadius: 2
             }}
           >
@@ -127,6 +126,10 @@ const ProductList: React.FC = () => {
               to="/crawl"
               variant="contained"
               startIcon={<ShoppingBagIcon />}
+              sx={{ 
+                backgroundColor: '#f27a1a',
+                '&:hover': { backgroundColor: '#d65a00' }
+              }}
             >
               Crawl New Product
             </Button>
@@ -134,90 +137,193 @@ const ProductList: React.FC = () => {
         ) : (
           <Grid container spacing={3}>
             {products.map((product) => (
-              <Grid item xs={12} sm={6} md={4} key={product.sku}>
+              <Grid item xs={12} sm={6} md={4} lg={3} key={product.sku}>
                 <Card 
                   sx={{ 
                     height: '100%',
                     display: 'flex',
                     flexDirection: 'column',
-                    transition: 'transform 0.2s',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
                     '&:hover': {
                       transform: 'translateY(-4px)',
-                      boxShadow: 6
-                    }
+                      boxShadow: 3
+                    },
+                    borderRadius: 2,
+                    border: '1px solid #e5e5e5'
                   }}
                 >
-                  <CardMedia
-                    component="div"
-                    sx={{
-                      height: 200,
-                      backgroundColor: 'grey.100',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    {product.images && product.images.length > 0 ? (
-                      <img
-                        src={product.images[0]}
-                        alt={product.name}
-                        style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
-                      />
-                    ) : (
-                      <ShoppingBagIcon sx={{ fontSize: 48, color: 'text.secondary' }} />
-                    )}
-                  </CardMedia>
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" component="div" gutterBottom noWrap>
-                      {product.name}
-                    </Typography>
-                    <Stack direction="row" spacing={1} mb={1}>
-                      <Chip 
-                        label={product.brand}
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      />
-                      <Chip
-                        label={`SKU: ${product.sku}`}
-                        size="small"
-                        variant="outlined"
-                      />
-                    </Stack>
-                    <Box display="flex" alignItems="center" gap={1} mb={2}>
-                      <LocalOfferIcon color="error" fontSize="small" />
-                      <Typography variant="h6" color="error.main">
-                        ${(product.discountedPrice / 100).toFixed(2)}
-                      </Typography>
-                      {product.originalPrice !== product.discountedPrice && (
-                        <Typography 
-                          variant="body2" 
-                          color="text.secondary" 
-                          sx={{ textDecoration: 'line-through' }}
-                        >
-                          ${(product.originalPrice / 100).toFixed(2)}
-                        </Typography>
-                      )}
-                    </Box>
-                    {product.score !== null && (
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <Rating 
-                          value={product.score / 20} 
-                          precision={0.5} 
-                          readOnly 
+                  <Box sx={{ position: 'relative' }}>
+                    <CardMedia
+                      component="div"
+                      sx={{
+                        height: 320,
+                        backgroundColor: '#f8f8f8',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      {product.images && product.images.length > 0 ? (
+                        <img
+                          src={product.images[0]}
+                          alt={product.name}
+                          style={{ height: '100%', width: '100%', objectFit: 'contain' }}
                         />
-                        <Typography variant="body2" color="text.secondary">
-                          ({product.score}/100)
+                      ) : (
+                        <ShoppingBagIcon sx={{ fontSize: 48, color: 'text.secondary' }} />
+                      )}
+                    </CardMedia>
+                    {product.score !== null && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          bgcolor: 'rgba(0, 0, 0, 0.6)',
+                          color: 'white',
+                          borderRadius: 1,
+                          px: 1,
+                          py: 0.5,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.5
+                        }}
+                      >
+                        <StarIcon sx={{ fontSize: 16 }} />
+                        <Typography variant="caption">
+                          {product.score}/100
                         </Typography>
                       </Box>
                     )}
+                  </Box>
+                  <CardContent sx={{ flexGrow: 1, p: 2 }}>
+                    <Stack spacing={1}>
+                      <Typography 
+                        variant="subtitle2" 
+                        color="text.secondary"
+                        sx={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 1,
+                          WebkitBoxOrient: 'vertical',
+                        }}
+                      >
+                        {product.brand}
+                      </Typography>
+                      
+                      <Typography 
+                        variant="body1"
+                        sx={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          minHeight: '3em',
+                          lineHeight: 1.5
+                        }}
+                      >
+                        {product.name}
+                      </Typography>
+
+                      {product.attributes && (
+                        <Stack direction="row" spacing={2} alignItems="center">
+                          {product.attributes.find(attr => attr.name === 'review_count') && (
+                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                              <Rating 
+                                value={3.7} 
+                                size="small" 
+                                readOnly 
+                                precision={0.1}
+                              />
+                              <Typography variant="caption" color="text.secondary">
+                                ({product.attributes.find(attr => attr.name === 'review_count')?.value || 0})
+                              </Typography>
+                            </Stack>
+                          )}
+                          {product.attributes.find(attr => attr.name === 'favorite_count') && (
+                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                              <FavoriteIcon sx={{ fontSize: 16, color: '#e81224' }} />
+                              <Typography variant="caption" color="text.secondary">
+                                {product.attributes.find(attr => attr.name === 'favorite_count')?.value || 0}
+                              </Typography>
+                            </Stack>
+                          )}
+                        </Stack>
+                      )}
+
+                      <Box>
+                        <Typography variant="h6" color="#f27a1a" fontWeight="bold">
+                          {(product.discountedPrice / 100).toLocaleString('tr-TR', {
+                            style: 'currency',
+                            currency: 'TRY'
+                          })}
+                        </Typography>
+                        {product.originalPrice !== product.discountedPrice && (
+                          <Typography 
+                            variant="body2" 
+                            color="text.secondary" 
+                            sx={{ textDecoration: 'line-through' }}
+                          >
+                            {(product.originalPrice / 100).toLocaleString('tr-TR', {
+                              style: 'currency',
+                              currency: 'TRY'
+                            })}
+                          </Typography>
+                        )}
+                      </Box>
+
+                      {product.variants && product.variants.length > 0 && (
+                        <Box>
+                          <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                            Available Colors:
+                          </Typography>
+                          <Stack direction="row" spacing={1} flexWrap="wrap">
+                            {product.variants.slice(0, 4).map((variant, index) => (
+                              <Box
+                                key={variant.sku}
+                                sx={{
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: '50%',
+                                  overflow: 'hidden',
+                                  border: '1px solid #e5e5e5'
+                                }}
+                              >
+                                {variant.images && variant.images[0] ? (
+                                  <img
+                                    src={variant.images[0]}
+                                    alt={variant.color || `Color ${index + 1}`}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  />
+                                ) : (
+                                  <Box sx={{ width: '100%', height: '100%', bgcolor: '#f8f8f8' }} />
+                                )}
+                              </Box>
+                            ))}
+                            {product.variants.length > 4 && (
+                              <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
+                                +{product.variants.length - 4} more
+                              </Typography>
+                            )}
+                          </Stack>
+                        </Box>
+                      )}
+                    </Stack>
                   </CardContent>
-                  <CardActions>
+                  <CardActions sx={{ p: 2, pt: 0 }}>
                     <Button 
-                      size="small" 
+                      fullWidth
+                      variant="contained"
                       component={Link} 
                       to={`/product/${product.sku}`}
-                      sx={{ ml: 'auto' }}
+                      sx={{ 
+                        borderRadius: 1,
+                        textTransform: 'none',
+                        backgroundColor: '#f27a1a',
+                        '&:hover': { backgroundColor: '#d65a00' }
+                      }}
                     >
                       View Details
                     </Button>

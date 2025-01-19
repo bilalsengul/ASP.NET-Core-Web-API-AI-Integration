@@ -39,3 +39,4 @@
 /Users/bilalsengul/Desktop/CURSOR/Case U/ASP.NET-Core-Web-API---AI-Integration/TrendyolProductAPI/obj/Debug/net9.0/TrendyolProductAPI.pdb
 /Users/bilalsengul/Desktop/CURSOR/Case U/ASP.NET-Core-Web-API---AI-Integration/TrendyolProductAPI/obj/Debug/net9.0/TrendyolProductAPI.genruntimeconfig.cache
 /Users/bilalsengul/Desktop/CURSOR/Case U/ASP.NET-Core-Web-API---AI-Integration/TrendyolProductAPI/obj/Debug/net9.0/ref/TrendyolProductAPI.dll
+/Users/bilalsengul/Desktop/CURSOR/Case U/ASP.NET-Core-Web-API---AI-Integration/TrendyolProductAPI/bin/Debug/net9.0/AngleSharp.dll

@@ -45,6 +45,10 @@
         "net9.0": {
           "targetAlias": "net9.0",
           "dependencies": {
+            "AngleSharp": {
+              "target": "Package",
+              "version": "[1.2.0, )"
+            },
             "HtmlAgilityPack": {
               "target": "Package",
               "version": "[1.11.54, )"

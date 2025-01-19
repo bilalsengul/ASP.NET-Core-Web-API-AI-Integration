@@ -2,6 +2,19 @@
   "version": 3,
   "targets": {
     "net9.0": {
+      "AngleSharp/1.2.0": {
+        "type": "package",
+        "compile": {
+          "lib/net8.0/AngleSharp.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/AngleSharp.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "HtmlAgilityPack/1.11.54": {
         "type": "package",
         "compile": {
@@ -333,6 +346,31 @@
     }
   },
   "libraries": {
+    "AngleSharp/1.2.0": {
+      "sha512": "uF/PzSCVcb+b2nqVvHZbOqexoJ9R6QLjonugPf0PQl+0h7YKaFZeXyspctbHe5HGlx7/Iuk5BErtk+t63ac/ZA==",
+      "type": "package",
+      "path": "anglesharp/1.2.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "README.md",
+        "anglesharp.1.2.0.nupkg.sha512",
+        "anglesharp.nuspec",
+        "lib/net462/AngleSharp.dll",
+        "lib/net462/AngleSharp.xml",
+        "lib/net472/AngleSharp.dll",
+        "lib/net472/AngleSharp.xml",
+        "lib/net6.0/AngleSharp.dll",
+        "lib/net6.0/AngleSharp.xml",
+        "lib/net7.0/AngleSharp.dll",
+        "lib/net7.0/AngleSharp.xml",
+        "lib/net8.0/AngleSharp.dll",
+        "lib/net8.0/AngleSharp.xml",
+        "lib/netstandard2.0/AngleSharp.dll",
+        "lib/netstandard2.0/AngleSharp.xml",
+        "logo.png"
+      ]
+    },
     "HtmlAgilityPack/1.11.54": {
       "sha512": "bgB79N4urc4D7hrD4R+Qk6CjPiYOfs6vfXNsmw3nCcfQEQvBQGjfAcl5k/tB1ZP1hA0d7xXs0jK8xAXV36IVUg==",
       "type": "package",
@@ -989,6 +1027,7 @@
   },
   "projectFileDependencyGroups": {
     "net9.0": [
+      "AngleSharp >= 1.2.0",
       "HtmlAgilityPack >= 1.11.54",
       "Microsoft.AspNetCore.OpenApi >= 9.0.0",
       "OpenAI >= 1.7.2",
@@ -1039,6 +1078,10 @@
       "net9.0": {
         "targetAlias": "net9.0",
         "dependencies": {
+          "AngleSharp": {
+            "target": "Package",
+            "version": "[1.2.0, )"
+          },
           "HtmlAgilityPack": {
             "target": "Package",
             "version": "[1.11.54, )"

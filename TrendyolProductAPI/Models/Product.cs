@@ -1,11 +1,13 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace TrendyolProductAPI.Models
 {
     public class ProductAttribute
     {
-        public string? Key { get; set; }
         public string? Name { get; set; }
+        public string? Value { get; set; }
     }
 
     public class Product : ICloneable
@@ -22,6 +24,11 @@ namespace TrendyolProductAPI.Models
         public List<string> Images { get; set; } = new List<string>();
         public decimal? Score { get; set; }
         public bool IsSaved { get; set; }
+        public string? Color { get; set; }
+        public string? Size { get; set; }
+        public string? VariantId { get; set; }
+        public bool IsMainVariant { get; set; }
+        public List<Product> Variants { get; set; } = new List<Product>();
 
         public object Clone()
         {
@@ -33,8 +40,8 @@ namespace TrendyolProductAPI.Models
                 ParentSku = this.ParentSku,
                 Attributes = this.Attributes.Select(a => new ProductAttribute 
                 { 
-                    Key = a.Key, 
-                    Name = a.Name 
+                    Name = a.Name,
+                    Value = a.Value 
                 }).ToList(),
                 Category = this.Category,
                 Brand = this.Brand,
@@ -42,7 +49,12 @@ namespace TrendyolProductAPI.Models
                 DiscountedPrice = this.DiscountedPrice,
                 Images = new List<string>(this.Images),
                 Score = this.Score,
-                IsSaved = this.IsSaved
+                IsSaved = this.IsSaved,
+                Color = this.Color,
+                Size = this.Size,
+                VariantId = this.VariantId,
+                IsMainVariant = this.IsMainVariant,
+                Variants = this.Variants.Select(v => (Product)v.Clone()).ToList()
             };
         }
     }
