@@ -84,9 +84,9 @@ namespace TrendyolProductAPI.Services
         public async Task<ProductVariants> GetProductVariantsAsync(string sku)
         {
             _logger.LogInformation("Getting variants for product with SKU: {Sku}", sku);
-            var product = await GetProductBySkuAsync(sku);
-            if (product == null)
-            {
+                var product = await GetProductBySkuAsync(sku);
+                if (product == null)
+                {
                 throw new KeyNotFoundException($"Product with SKU {sku} not found");
             }
 
@@ -145,77 +145,85 @@ namespace TrendyolProductAPI.Services
                 product.Images ??= new List<string>();
                 product.Variants ??= new List<Product>();
 
-                // Transform basic product information
-                var colorText = product.Color?.ToLower() ?? "elegant";
-                var categoryText = product.Category?.ToLower() ?? "product";
-                var brandText = product.Brand ?? "Premium Brand";
-                var priceText = product.DiscountedPrice > 0 ? $" at an attractive price of {product.DiscountedPrice:C}" : "";
+                // Check if this is the first transformation or AI description enhancement
+                bool isFirstTransform = string.IsNullOrEmpty(product.Description) || !product.Description.Contains("masterfully crafted");
 
-                // Generate a detailed product name
-                product.Name = $"{brandText} {colorText} Collection - Premium {categoryText}";
-
-                // Generate a comprehensive AI description
-                var descriptionBuilder = new System.Text.StringBuilder();
-                
-                // Main description
-                descriptionBuilder.AppendLine($"Discover the epitome of style with this exquisite {colorText} {categoryText} from {brandText}'s latest collection{priceText}. ");
-                
-                // Design and quality
-                descriptionBuilder.AppendLine($"This masterfully crafted piece showcases the perfect blend of contemporary design and practical functionality. ");
-                
-                // Material and construction
-                var material = product.Attributes.FirstOrDefault(a => a.Name == "Material")?.Value ?? "premium materials";
-                descriptionBuilder.AppendLine($"Expertly constructed using {material}, this {categoryText} exemplifies durability and sophistication. ");
-                
-                // Features and benefits
-                var features = product.Attributes.FirstOrDefault(a => a.Name == "Features")?.Value ?? "multiple features";
-                descriptionBuilder.AppendLine($"Featuring {features}, this versatile accessory adapts seamlessly to your daily needs. ");
-                
-                // Dimensions and practicality
-                var dimensions = product.Attributes.FirstOrDefault(a => a.Name == "Dimensions")?.Value ?? "spacious dimensions";
-                descriptionBuilder.AppendLine($"With its {dimensions}, it offers ample space while maintaining a sleek profile. ");
-                
-                // Style and versatility
-                var style = product.Attributes.FirstOrDefault(a => a.Name == "Style")?.Value ?? "modern style";
-                descriptionBuilder.AppendLine($"The {style} design makes it a perfect companion for both casual outings and formal occasions. ");
-                
-                // Care instructions
-                var care = product.Attributes.FirstOrDefault(a => a.Name == "Care Instructions")?.Value ?? "simple care routine";
-                descriptionBuilder.AppendLine($"\nCare & Maintenance: {care} to maintain its pristine condition. ");
-                
-                // Shipping and availability
-                if (product.HasFastShipping)
+                if (isFirstTransform)
                 {
-                    descriptionBuilder.AppendLine($"\nEnjoy the convenience of fast shipping and experience the luxury of {brandText} at your doorstep. ");
-                }
+                    // Basic transformation
+                    var colorText = product.Color?.ToLower() ?? "elegant";
+                    var categoryText = product.Category?.ToLower() ?? "product";
+                    var brandText = product.Brand ?? "Premium Brand";
+                    var priceText = product.DiscountedPrice > 0 ? $" at an attractive price of {product.DiscountedPrice:C}" : "";
 
-                product.Description = descriptionBuilder.ToString();
+                    // Generate a detailed product name
+                    product.Name = $"{brandText} {colorText} Collection - Premium {categoryText}";
 
-                // Add or update standard attributes
-                var standardAttributes = new List<(string Name, string Value)>
-                {
-                    ("Material", "Premium Synthetic Leather"),
-                    ("Style", "Modern Crossbody"),
-                    ("Gender", "Women"),
-                    ("Dimensions", "27x27x14 cm"),
-                    ("Features", "Adjustable Strap, Multiple Compartments, Premium Hardware, Interior Pockets"),
-                    ("Care Instructions", "Wipe with damp cloth, Store in dust bag, Avoid direct sunlight")
-                };
+                    // Basic description
+                    product.Description = $"Experience luxury and style with this {colorText} {categoryText} from {brandText}'s latest collection{priceText}. " +
+                                        "This piece combines fashion with functionality.";
 
-                foreach (var (name, value) in standardAttributes)
-                {
-                    var existingAttr = product.Attributes.FirstOrDefault(a => a.Name == name);
-                    if (existingAttr != null)
+                    // Add standard attributes
+                    var standardAttributes = new List<(string Name, string Value)>
                     {
-                        existingAttr.Value = value;
-                    }
-                    else
+                        ("Material", "Premium Synthetic Leather"),
+                        ("Style", "Modern Crossbody"),
+                        ("Gender", "Women"),
+                        ("Dimensions", "27x27x14 cm"),
+                        ("Features", "Adjustable Strap, Multiple Compartments"),
+                        ("Care Instructions", "Wipe with damp cloth")
+                    };
+
+                    foreach (var (name, value) in standardAttributes)
                     {
-                        product.Attributes.Add(new ProductAttribute { Name = name, Value = value });
+                        var existingAttr = product.Attributes.FirstOrDefault(a => a.Name == name);
+                        if (existingAttr != null)
+                        {
+                            existingAttr.Value = value;
+                        }
+                        else
+                        {
+                            product.Attributes.Add(new ProductAttribute { Name = name, Value = value });
+                        }
                     }
                 }
+                else
+                {
+                    // Enhanced AI description
+                    var descriptionBuilder = new System.Text.StringBuilder();
+                    var material = product.Attributes.FirstOrDefault(a => a.Name == "Material")?.Value ?? "Premium Synthetic Leather";
+                    var features = product.Attributes.FirstOrDefault(a => a.Name == "Features")?.Value ?? "multiple features";
+                    var dimensions = product.Attributes.FirstOrDefault(a => a.Name == "Dimensions")?.Value ?? "spacious dimensions";
+                    var style = product.Attributes.FirstOrDefault(a => a.Name == "Style")?.Value ?? "Modern";
+                    var care = product.Attributes.FirstOrDefault(a => a.Name == "Care Instructions")?.Value ?? "gentle care";
 
-                // Update shipping and payment information
+                    descriptionBuilder.AppendLine($"Discover the epitome of style with this exquisite {product.Name}. ");
+                    descriptionBuilder.AppendLine($"This masterfully crafted piece showcases the perfect blend of contemporary design and practical functionality. ");
+                    descriptionBuilder.AppendLine($"Expertly constructed using {material}, this product exemplifies durability and sophistication. ");
+                    descriptionBuilder.AppendLine($"Featuring {features}, this versatile accessory adapts seamlessly to your daily needs. ");
+                    descriptionBuilder.AppendLine($"With its {dimensions}, it offers ample space while maintaining a sleek profile. ");
+                    descriptionBuilder.AppendLine($"The {style} design makes it a perfect companion for both casual outings and formal occasions. ");
+                    descriptionBuilder.AppendLine($"\nCare & Maintenance: {care} to maintain its pristine condition. ");
+                    descriptionBuilder.AppendLine($"\nEnjoy the convenience of fast shipping and experience the luxury of {product.Brand} at your doorstep. ");
+
+                    product.Description = descriptionBuilder.ToString();
+
+                    // Update features with more details
+                    var existingFeatures = product.Attributes.FirstOrDefault(a => a.Name == "Features");
+                    if (existingFeatures != null)
+                    {
+                        existingFeatures.Value += ", Premium Hardware, Interior Pockets";
+                    }
+
+                    // Update care instructions with more details
+                    var existingCare = product.Attributes.FirstOrDefault(a => a.Name == "Care Instructions");
+                    if (existingCare != null)
+                    {
+                        existingCare.Value += ", Store in dust bag, Avoid direct sunlight";
+                    }
+                }
+
+                // Common updates for both stages
                 product.ShippingInfo = "Fast Shipping Available - Delivery in 2-3 Business Days";
                 product.HasFastShipping = true;
                 product.PaymentOptions = new List<string>
@@ -226,7 +234,6 @@ namespace TrendyolProductAPI.Services
                     "Digital Wallet"
                 };
 
-                // Update stock and rating information
                 product.StockStatus = "In Stock";
                 product.RatingCount = Math.Max(product.RatingCount, 10);
                 product.FavoriteCount = Math.Max(product.FavoriteCount, 50);
@@ -245,4 +252,4 @@ namespace TrendyolProductAPI.Services
             }
         }
     }
-}
+} 
