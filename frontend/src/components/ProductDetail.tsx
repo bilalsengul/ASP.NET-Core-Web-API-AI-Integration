@@ -45,7 +45,7 @@ const ProductDetail: React.FC = () => {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [transformState, setTransformState] = useState<'initial' | 'transformed' | 'aiDesc'>('initial');
+  const [transformState, setTransformState] = useState<'initial' | 'transformed'>('initial');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -53,23 +53,13 @@ const ProductDetail: React.FC = () => {
       
       try {
         setLoading(true);
+        setErrorMessage(null);
         const [productData, variantsData] = await Promise.all([
           getProductBySku(sku),
           getProductVariants(sku)
         ]);
-        
         setProduct(productData);
         setVariants(variantsData);
-        setSelectedColor(productData.color || null);
-        setSelectedSize(productData.size || null);
-        
-        // Find the variant that matches both color and size
-        if (variantsData.variants.length > 0) {
-          const matchingVariant = variantsData.variants.find(
-            (v: Product) => v.color === productData.color && v.size === productData.size
-          );
-          setSelectedVariant(matchingVariant || null);
-        }
       } catch (error) {
         setErrorMessage(getErrorMessage(error));
       } finally {
@@ -79,6 +69,23 @@ const ProductDetail: React.FC = () => {
 
     fetchData();
   }, [sku]);
+
+  // Update displayed product when a variant is selected
+  useEffect(() => {
+    if (selectedVariant) {
+      // Keep the original product data but update variant-specific fields
+      setProduct(prev => prev ? {
+        ...prev,
+        color: selectedVariant.color || prev.color,
+        size: selectedVariant.size || prev.size,
+        sku: selectedVariant.sku,
+        discountedPrice: selectedVariant.discountedPrice || prev.discountedPrice,
+        originalPrice: selectedVariant.originalPrice || prev.originalPrice,
+        images: selectedVariant.images?.length ? selectedVariant.images : prev.images
+      } : null);
+      setCurrentImageIndex(0); // Reset image index when variant changes
+    }
+  }, [selectedVariant]);
 
   const handleColorChange = (color: string) => {
     setSelectedColor(color);
@@ -107,22 +114,6 @@ const ProductDetail: React.FC = () => {
       const transformedProduct = await transformProduct(sku);
       setProduct(transformedProduct);
       setTransformState('transformed');
-    } catch (error) {
-      setErrorMessage(getErrorMessage(error));
-    } finally {
-      setTransforming(false);
-    }
-  };
-
-  const handleAddAiDesc = async () => {
-    if (!product) return;
-    
-    try {
-      setTransforming(true);
-      setErrorMessage(null);
-      const transformedProduct = await transformProduct(product.sku);
-      setProduct(transformedProduct);
-      setTransformState('aiDesc');
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     } finally {
@@ -328,78 +319,37 @@ const ProductDetail: React.FC = () => {
               </Box>
             )}
 
+            <Box>
+              <Typography variant="subtitle1" gutterBottom>
+                Description
+              </Typography>
+              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                {product.description}
+              </Typography>
+            </Box>
+
             <Stack direction="row" spacing={2}>
-              {transformState === 'initial' && (
-                <Button
-                  variant="outlined"
-                  startIcon={<AutoFixHighIcon />}
-                  fullWidth
-                  size="large"
-                  onClick={handleTransform}
-                  disabled={transforming}
-                >
-                  {transforming ? 'Transforming...' : 'Transform'}
-                </Button>
-              )}
-              {transformState === 'transformed' && (
-                <Button
-                  variant="outlined"
-                  startIcon={<AutoFixHighIcon />}
-                  fullWidth
-                  size="large"
-                  onClick={handleAddAiDesc}
-                  disabled={transforming}
-                >
-                  {transforming ? 'Processing...' : 'Add AI Desc.'}
-                </Button>
-              )}
-              {transformState === 'aiDesc' && (
-                <Button
-                  variant="outlined"
-                  startIcon={<SaveIcon />}
-                  fullWidth
-                  size="large"
-                  onClick={handleSave}
-                  disabled={saving}
-                >
-                  {saving ? 'Saving...' : 'Save'}
-                </Button>
-              )}
+              <Button
+                variant="contained"
+                startIcon={<AutoFixHighIcon />}
+                onClick={handleTransform}
+                disabled={transforming || transformState === 'transformed'}
+              >
+                {transforming ? 'Transforming...' : 'Transform'}
+              </Button>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<SaveIcon />}
+                onClick={handleSave}
+                disabled={saving || transformState === 'initial'}
+              >
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
             </Stack>
           </Stack>
         </Grid>
       </Grid>
-
-      {/* Add Description Section */}
-      <Box sx={{ mt: 4 }}>
-        <Typography variant="h6" gutterBottom>
-          Description
-        </Typography>
-        <Typography variant="body1" sx={{ whiteSpace: 'pre-line' }}>
-          {product.description}
-        </Typography>
-      </Box>
-
-      {/* Add Attributes Section */}
-      {product.attributes && product.attributes.length > 0 && (
-        <Box sx={{ mt: 4 }}>
-          <Typography variant="h6" gutterBottom>
-            Product Details
-          </Typography>
-          <List>
-            {product.attributes.map((attr, index) => (
-              <ListItem key={index}>
-                <Typography variant="subtitle2" component="span" sx={{ mr: 1 }}>
-                  {attr.name}:
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {attr.value}
-                </Typography>
-              </ListItem>
-            ))}
-          </List>
-        </Box>
-      )}
     </Container>
   );
 };

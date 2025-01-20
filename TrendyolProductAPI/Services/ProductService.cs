@@ -6,6 +6,8 @@ using System.Text.Json;
 using System.IO;
 using Microsoft.Extensions.Logging;
 using TrendyolProductAPI.Models;
+using OpenAI_API;
+using Microsoft.Extensions.Configuration;
 
 namespace TrendyolProductAPI.Services
 {
@@ -15,11 +17,16 @@ namespace TrendyolProductAPI.Services
         private readonly string _productsFilePath;
         private static readonly object _lock = new object();
         private readonly IProductCrawlerService _crawlerService;
+        private readonly OpenAIAPI _openAI;
 
-        public ProductService(ILogger<ProductService> logger, IProductCrawlerService crawlerService)
+        public ProductService(ILogger<ProductService> logger, IProductCrawlerService crawlerService, IConfiguration configuration)
         {
             _logger = logger;
             _crawlerService = crawlerService;
+            
+            // Initialize OpenAI
+            var openAiKey = configuration["OpenAI:ApiKey"];
+            _openAI = new OpenAIAPI(openAiKey);
             
             // Get the project root directory
             var rootDirectory = Directory.GetCurrentDirectory();
@@ -145,99 +152,35 @@ namespace TrendyolProductAPI.Services
                 product.Images ??= new List<string>();
                 product.Variants ??= new List<Product>();
 
-                // Check if this is the first transformation or AI description enhancement
-                bool isFirstTransform = string.IsNullOrEmpty(product.Description) || !product.Description.Contains("masterfully crafted");
+                // Basic transformation to ensure essential data is present
+                ApplyBasicTransformation(product);
 
-                if (isFirstTransform)
+                // Try to generate AI description, with fallback to basic description
+                try
                 {
-                    // Basic transformation
-                    var colorText = product.Color?.ToLower() ?? "elegant";
-                    var categoryText = product.Category?.ToLower() ?? "product";
-                    var brandText = product.Brand ?? "Premium Brand";
-                    var priceText = product.DiscountedPrice > 0 ? $" at an attractive price of {product.DiscountedPrice:C}" : "";
-
-                    // Generate a detailed product name
-                    product.Name = $"{brandText} {colorText} Collection - Premium {categoryText}";
-
-                    // Basic description
-                    product.Description = $"Experience luxury and style with this {colorText} {categoryText} from {brandText}'s latest collection{priceText}. " +
-                                        "This piece combines fashion with functionality.";
-
-                    // Add standard attributes
-                    var standardAttributes = new List<(string Name, string Value)>
+                    var aiDescription = await GenerateAIDescriptionAsync(product);
+                    if (!string.IsNullOrWhiteSpace(aiDescription))
                     {
-                        ("Material", "Premium Synthetic Leather"),
-                        ("Style", "Modern Crossbody"),
-                        ("Gender", "Women"),
-                        ("Dimensions", "27x27x14 cm"),
-                        ("Features", "Adjustable Strap, Multiple Compartments"),
-                        ("Care Instructions", "Wipe with damp cloth")
-                    };
-
-                    foreach (var (name, value) in standardAttributes)
+                        product.Description = aiDescription;
+                    }
+                    else
                     {
-                        var existingAttr = product.Attributes.FirstOrDefault(a => a.Name == name);
-                        if (existingAttr != null)
-                        {
-                            existingAttr.Value = value;
-                        }
-                        else
-                        {
-                            product.Attributes.Add(new ProductAttribute { Name = name, Value = value });
-                        }
+                        _logger.LogWarning("AI description generation returned empty result for SKU {Sku}, using fallback description", sku);
                     }
                 }
-                else
+                catch (Exception ex)
                 {
-                    // Enhanced AI description
-                    var descriptionBuilder = new System.Text.StringBuilder();
-                    var material = product.Attributes.FirstOrDefault(a => a.Name == "Material")?.Value ?? "Premium Synthetic Leather";
-                    var features = product.Attributes.FirstOrDefault(a => a.Name == "Features")?.Value ?? "multiple features";
-                    var dimensions = product.Attributes.FirstOrDefault(a => a.Name == "Dimensions")?.Value ?? "spacious dimensions";
-                    var style = product.Attributes.FirstOrDefault(a => a.Name == "Style")?.Value ?? "Modern";
-                    var care = product.Attributes.FirstOrDefault(a => a.Name == "Care Instructions")?.Value ?? "gentle care";
-
-                    descriptionBuilder.AppendLine($"Discover the epitome of style with this exquisite {product.Name}. ");
-                    descriptionBuilder.AppendLine($"This masterfully crafted piece showcases the perfect blend of contemporary design and practical functionality. ");
-                    descriptionBuilder.AppendLine($"Expertly constructed using {material}, this product exemplifies durability and sophistication. ");
-                    descriptionBuilder.AppendLine($"Featuring {features}, this versatile accessory adapts seamlessly to your daily needs. ");
-                    descriptionBuilder.AppendLine($"With its {dimensions}, it offers ample space while maintaining a sleek profile. ");
-                    descriptionBuilder.AppendLine($"The {style} design makes it a perfect companion for both casual outings and formal occasions. ");
-                    descriptionBuilder.AppendLine($"\nCare & Maintenance: {care} to maintain its pristine condition. ");
-                    descriptionBuilder.AppendLine($"\nEnjoy the convenience of fast shipping and experience the luxury of {product.Brand} at your doorstep. ");
-
-                    product.Description = descriptionBuilder.ToString();
-
-                    // Update features with more details
-                    var existingFeatures = product.Attributes.FirstOrDefault(a => a.Name == "Features");
-                    if (existingFeatures != null)
-                    {
-                        existingFeatures.Value += ", Premium Hardware, Interior Pockets";
-                    }
-
-                    // Update care instructions with more details
-                    var existingCare = product.Attributes.FirstOrDefault(a => a.Name == "Care Instructions");
-                    if (existingCare != null)
-                    {
-                        existingCare.Value += ", Store in dust bag, Avoid direct sunlight";
-                    }
+                    _logger.LogError(ex, "Error generating AI description for SKU {Sku}, using fallback description", sku);
                 }
 
-                // Common updates for both stages
-                product.ShippingInfo = "Fast Shipping Available - Delivery in 2-3 Business Days";
-                product.HasFastShipping = true;
-                product.PaymentOptions = new List<string>
+                // Ensure description is not empty by using fallback if needed
+                if (string.IsNullOrWhiteSpace(product.Description))
                 {
-                    "Credit Card - Up to 12 installments",
-                    "Bank Transfer",
-                    "Mobile Payment",
-                    "Digital Wallet"
-                };
+                    GenerateFallbackDescription(product);
+                }
 
-                product.StockStatus = "In Stock";
-                product.RatingCount = Math.Max(product.RatingCount, 10);
-                product.FavoriteCount = Math.Max(product.FavoriteCount, 50);
-                product.Score = product.Score ?? 4.5m;
+                // Common updates
+                ApplyCommonUpdates(product);
 
                 // Save the transformed product
                 await SaveProductAsync(product);
@@ -250,6 +193,99 @@ namespace TrendyolProductAPI.Services
                 _logger.LogError(ex, "Error transforming product with SKU {Sku}", sku);
                 throw;
             }
+        }
+
+        private void ApplyBasicTransformation(Product product)
+        {
+            // Ensure basic product information is present
+            product.Name = string.IsNullOrWhiteSpace(product.Name) 
+                ? $"{product.Brand ?? "Premium Brand"} {product.Category ?? "Product"}"
+                : product.Name;
+
+            product.Brand ??= "Premium Brand";
+            product.Category ??= "General";
+            product.Color ??= "Standard";
+
+            // Add or update standard attributes
+            var standardAttributes = new List<(string Name, string Value)>
+            {
+                ("Material", "Premium Material"),
+                ("Style", "Modern Design"),
+                ("Gender", "Unisex"),
+                ("Dimensions", "Standard Size"),
+                ("Features", "Multiple Features"),
+                ("Care Instructions", "Standard Care")
+            };
+
+            foreach (var (name, defaultValue) in standardAttributes)
+            {
+                var existingAttr = product.Attributes.FirstOrDefault(a => a.Name == name);
+                if (existingAttr != null)
+                {
+                    if (string.IsNullOrWhiteSpace(existingAttr.Value))
+                    {
+                        existingAttr.Value = defaultValue;
+                    }
+                }
+                else
+                {
+                    product.Attributes.Add(new ProductAttribute { Name = name, Value = defaultValue });
+                }
+            }
+        }
+
+        private async Task<string> GenerateAIDescriptionAsync(Product product)
+        {
+            var prompt = $"Write a detailed, engaging product description for an e-commerce website. Product details:\n" +
+                        $"Name: {product.Name}\n" +
+                        $"Brand: {product.Brand}\n" +
+                        $"Category: {product.Category}\n" +
+                        $"Color: {product.Color}\n" +
+                        $"Price: ${product.DiscountedPrice}\n" +
+                        $"Features: {string.Join(", ", product.Attributes.Select(a => $"{a.Name}: {a.Value}"))}\n\n" +
+                        "The description should be professional, highlight key features, and be around 200 words. Focus on benefits and unique selling points.";
+
+            var completionRequest = _openAI.Chat.CreateConversation();
+            completionRequest.AppendSystemMessage("You are a professional e-commerce product description writer. Create engaging, detailed, and accurate product descriptions that highlight key features and benefits.");
+            completionRequest.AppendUserInput(prompt);
+
+            var response = await completionRequest.GetResponseFromChatbotAsync();
+            return response?.Trim();
+        }
+
+        private void GenerateFallbackDescription(Product product)
+        {
+            var features = string.Join(", ", product.Attributes
+                .Where(a => !string.IsNullOrWhiteSpace(a.Value))
+                .Select(a => $"{a.Name}: {a.Value}"));
+
+            var priceText = product.DiscountedPrice > 0 
+                ? $" available at ${product.DiscountedPrice}"
+                : "";
+
+            product.Description = $"Discover the exceptional quality of this {product.Color?.ToLower() ?? "premium"} " +
+                                $"{product.Category?.ToLower() ?? "product"} from {product.Brand ?? "our premium collection"}" +
+                                $"{priceText}. This product offers {features}. " +
+                                "Crafted with attention to detail and designed for optimal performance, " +
+                                "this item combines style with functionality to meet your needs.";
+        }
+
+        private void ApplyCommonUpdates(Product product)
+        {
+            product.ShippingInfo = "Fast Shipping Available - Delivery in 2-3 Business Days";
+            product.HasFastShipping = true;
+            product.PaymentOptions = new List<string>
+            {
+                "Credit Card - Up to 12 installments",
+                "Bank Transfer",
+                "Mobile Payment",
+                "Digital Wallet"
+            };
+
+            product.StockStatus = "In Stock";
+            product.RatingCount = Math.Max(product.RatingCount, 10);
+            product.FavoriteCount = Math.Max(product.FavoriteCount, 50);
+            product.Score = product.Score ?? 4.5m;
         }
     }
 } 
