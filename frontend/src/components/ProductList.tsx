@@ -191,7 +191,7 @@ const ProductList: React.FC = () => {
                       >
                         <StarIcon sx={{ fontSize: 16 }} />
                         <Typography variant="caption">
-                          {product.score}/100
+                          {product.score?.toFixed(1)}/5
                         </Typography>
                       </Box>
                     )}

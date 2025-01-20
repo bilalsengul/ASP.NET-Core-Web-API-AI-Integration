@@ -52,8 +52,11 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient();
 
 // Register services
-builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IProductCrawlerService, ProductCrawlerService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+
+// Add hosted service for cleanup
+builder.Services.AddHostedService<BackgroundCleanupService>();
 
 // Add CORS configuration
 builder.Services.AddCors(options =>

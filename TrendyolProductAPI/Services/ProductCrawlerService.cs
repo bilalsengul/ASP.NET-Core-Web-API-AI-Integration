@@ -21,13 +21,17 @@ namespace TrendyolProductAPI.Services
     public class ProductCrawlerService : IProductCrawlerService, IDisposable
     {
         private readonly ILogger<ProductCrawlerService> _logger;
-        private readonly IWebDriver _driver;
+        private IWebDriver _driver;
         private bool _disposed;
 
         public ProductCrawlerService(ILogger<ProductCrawlerService> logger)
         {
             _logger = logger;
-            
+            InitializeDriver();
+        }
+
+        private void InitializeDriver()
+        {
             var options = new ChromeOptions();
             options.AddArgument("--headless");
             options.AddArgument("--no-sandbox");
@@ -42,6 +46,11 @@ namespace TrendyolProductAPI.Services
         {
             try
             {
+                if (_disposed)
+                {
+                    throw new ObjectDisposedException(nameof(ProductCrawlerService));
+                }
+
                 _logger.LogInformation("Starting to crawl product from URL: {Url}", url);
 
                 _driver.Navigate().GoToUrl(url);
@@ -213,7 +222,8 @@ namespace TrendyolProductAPI.Services
                 var ratingText = doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'product-rating-score')]//div[@class='value']")?.InnerText.Trim();
                 if (decimal.TryParse(ratingText?.Replace(",", "."), out decimal rating))
                 {
-                    return rating;
+                    // Ensure rating is on a 5-point scale
+                    return Math.Min(5, Math.Max(0, rating));
                 }
             }
             catch (Exception ex)
@@ -305,17 +315,25 @@ namespace TrendyolProductAPI.Services
                     {
                         try
                         {
-                            var href = link.GetDomAttribute("href");
-                            if (!string.IsNullOrEmpty(href))
+                            // Extract variant information without crawling the full page
+                            var variantSku = ExtractSkuFromUrl(link.GetDomAttribute("href") ?? "");
+                            var variantColor = link.GetDomAttribute("title")?.Trim();
+                            var variantImage = link.FindElement(By.TagName("img"))?.GetDomAttribute("src");
+                            
+                            if (!string.IsNullOrEmpty(variantSku))
                             {
-                                var variant = await CrawlProductAsync($"https://www.trendyol.com{href}");
-                                variant.IsMainVariant = false;
-                                variants.Add(variant);
+                                variants.Add(new Product
+                                {
+                                    Sku = variantSku,
+                                    Color = variantColor,
+                                    Images = new List<string> { variantImage }.Where(img => !string.IsNullOrEmpty(img)).ToList(),
+                                    IsMainVariant = false
+                                });
                             }
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(ex, "Error crawling variant");
+                            _logger.LogError(ex, "Error extracting variant information");
                         }
                     }
                 }
@@ -329,12 +347,33 @@ namespace TrendyolProductAPI.Services
 
         public void Dispose()
         {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
             if (!_disposed)
             {
-                _driver?.Quit();
-                _driver?.Dispose();
+                if (disposing)
+                {
+                    try
+                    {
+                        _driver?.Quit();
+                        _driver?.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error disposing WebDriver");
+                    }
+                }
                 _disposed = true;
             }
+        }
+
+        ~ProductCrawlerService()
+        {
+            Dispose(false);
         }
     }
 } 

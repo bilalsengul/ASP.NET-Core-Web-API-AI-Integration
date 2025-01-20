@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProductBySku, getProductVariants, transformProduct, saveProduct, Product, ProductVariants, getErrorMessage } from '../services/api';
+import { getProductBySku, getProductVariants, transformProduct, saveProduct, Product, getErrorMessage } from '../services/api';
 import {
   Container,
   Typography,
@@ -8,10 +8,8 @@ import {
   Button,
   CircularProgress,
   Alert,
-  Paper,
   Stack,
   Rating,
-  Divider,
   Grid,
   ImageList,
   ImageListItem,
@@ -28,6 +26,12 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 
+interface ProductVariants {
+  colors: string[];
+  sizes: string[];
+  variants: Product[];
+}
+
 const ProductDetail: React.FC = () => {
   const { sku } = useParams<{ sku: string }>();
   const navigate = useNavigate();
@@ -41,6 +45,7 @@ const ProductDetail: React.FC = () => {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [transformState, setTransformState] = useState<'initial' | 'transformed' | 'aiDesc'>('initial');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,7 +66,7 @@ const ProductDetail: React.FC = () => {
         // Find the variant that matches both color and size
         if (variantsData.variants.length > 0) {
           const matchingVariant = variantsData.variants.find(
-            v => v.color === productData.color && v.size === productData.size
+            (v: Product) => v.color === productData.color && v.size === productData.size
           );
           setSelectedVariant(matchingVariant || null);
         }
@@ -79,7 +84,7 @@ const ProductDetail: React.FC = () => {
     setSelectedColor(color);
     // Find variant with selected color and current size
     const matchingVariant = variants?.variants.find(
-      v => v.color === color && (selectedSize ? v.size === selectedSize : true)
+      (v: Product) => v.color === color && (selectedSize ? v.size === selectedSize : true)
     );
     setSelectedVariant(matchingVariant || null);
   };
@@ -88,7 +93,7 @@ const ProductDetail: React.FC = () => {
     setSelectedSize(size);
     // Find variant with current color and selected size
     const matchingVariant = variants?.variants.find(
-      v => (selectedColor ? v.color === selectedColor : true) && v.size === size
+      (v: Product) => (selectedColor ? v.color === selectedColor : true) && v.size === size
     );
     setSelectedVariant(matchingVariant || null);
   };
@@ -101,6 +106,23 @@ const ProductDetail: React.FC = () => {
       setErrorMessage(null);
       const transformedProduct = await transformProduct(sku);
       setProduct(transformedProduct);
+      setTransformState('transformed');
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setTransforming(false);
+    }
+  };
+
+  const handleAddAiDesc = async () => {
+    if (!product) return;
+    
+    try {
+      setTransforming(true);
+      setErrorMessage(null);
+      const transformedProduct = await transformProduct(product.sku);
+      setProduct(transformedProduct);
+      setTransformState('aiDesc');
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     } finally {
@@ -116,6 +138,7 @@ const ProductDetail: React.FC = () => {
       setErrorMessage(null);
       const savedProduct = await saveProduct(product);
       setProduct(savedProduct);
+      setTransformState('initial'); // Reset state after saving
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     } finally {
@@ -306,30 +329,77 @@ const ProductDetail: React.FC = () => {
             )}
 
             <Stack direction="row" spacing={2}>
-              <Button
-                variant="outlined"
-                startIcon={<SaveIcon />}
-                fullWidth
-                size="large"
-                onClick={handleSave}
-                disabled={saving}
-              >
-                {saving ? 'Saving...' : 'Save'}
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<AutoFixHighIcon />}
-                fullWidth
-                size="large"
-                onClick={handleTransform}
-                disabled={transforming}
-              >
-                {transforming ? 'Transforming...' : 'Transform'}
-              </Button>
+              {transformState === 'initial' && (
+                <Button
+                  variant="outlined"
+                  startIcon={<AutoFixHighIcon />}
+                  fullWidth
+                  size="large"
+                  onClick={handleTransform}
+                  disabled={transforming}
+                >
+                  {transforming ? 'Transforming...' : 'Transform'}
+                </Button>
+              )}
+              {transformState === 'transformed' && (
+                <Button
+                  variant="outlined"
+                  startIcon={<AutoFixHighIcon />}
+                  fullWidth
+                  size="large"
+                  onClick={handleAddAiDesc}
+                  disabled={transforming}
+                >
+                  {transforming ? 'Processing...' : 'Add AI Desc.'}
+                </Button>
+              )}
+              {transformState === 'aiDesc' && (
+                <Button
+                  variant="outlined"
+                  startIcon={<SaveIcon />}
+                  fullWidth
+                  size="large"
+                  onClick={handleSave}
+                  disabled={saving}
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </Button>
+              )}
             </Stack>
           </Stack>
         </Grid>
       </Grid>
+
+      {/* Add Description Section */}
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="h6" gutterBottom>
+          Description
+        </Typography>
+        <Typography variant="body1" sx={{ whiteSpace: 'pre-line' }}>
+          {product.description}
+        </Typography>
+      </Box>
+
+      {/* Add Attributes Section */}
+      {product.attributes && product.attributes.length > 0 && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h6" gutterBottom>
+            Product Details
+          </Typography>
+          <List>
+            {product.attributes.map((attr, index) => (
+              <ListItem key={index}>
+                <Typography variant="subtitle2" component="span" sx={{ mr: 1 }}>
+                  {attr.name}:
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {attr.value}
+                </Typography>
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      )}
     </Container>
   );
 };
