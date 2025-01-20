@@ -9,9 +9,11 @@
       "TrendyolProductAPI/1.0.0": {
         "dependencies": {
           "AngleSharp": "1.2.0",
-          "HtmlAgilityPack": "1.11.54",
+          "HtmlAgilityPack": "1.11.72",
           "Microsoft.AspNetCore.OpenApi": "9.0.0",
           "OpenAI": "1.7.2",
+          "Selenium.Support": "4.27.0",
+          "Selenium.WebDriver": "4.27.0",
           "Swashbuckle.AspNetCore": "6.5.0"
         },
         "runtime": {
@@ -26,11 +28,11 @@
           }
         }
       },
-      "HtmlAgilityPack/1.11.54": {
+      "HtmlAgilityPack/1.11.72": {
         "runtime": {
           "lib/netstandard2.0/HtmlAgilityPack.dll": {
-            "assemblyVersion": "1.11.54.0",
-            "fileVersion": "1.11.54.0"
+            "assemblyVersion": "1.11.72.0",
+            "fileVersion": "1.11.72.0"
           }
         }
       },
@@ -127,6 +129,25 @@
           }
         }
       },
+      "Selenium.Support/4.27.0": {
+        "dependencies": {
+          "Selenium.WebDriver": "4.27.0"
+        },
+        "runtime": {
+          "lib/netstandard2.0/WebDriver.Support.dll": {
+            "assemblyVersion": "4.0.0.0",
+            "fileVersion": "4.0.0.0"
+          }
+        }
+      },
+      "Selenium.WebDriver/4.27.0": {
+        "runtime": {
+          "lib/net8.0/WebDriver.dll": {
+            "assemblyVersion": "4.0.0.0",
+            "fileVersion": "4.0.0.0"
+          }
+        }
+      },
       "Swashbuckle.AspNetCore/6.5.0": {
         "dependencies": {
           "Microsoft.Extensions.ApiDescription.Server": "6.0.5",
@@ -182,12 +203,12 @@
       "path": "anglesharp/1.2.0",
       "hashPath": "anglesharp.1.2.0.nupkg.sha512"
     },
-    "HtmlAgilityPack/1.11.54": {
+    "HtmlAgilityPack/1.11.72": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-bgB79N4urc4D7hrD4R+Qk6CjPiYOfs6vfXNsmw3nCcfQEQvBQGjfAcl5k/tB1ZP1hA0d7xXs0jK8xAXV36IVUg==",
-      "path": "htmlagilitypack/1.11.54",
-      "hashPath": "htmlagilitypack.1.11.54.nupkg.sha512"
+      "sha512": "sha512-RNLgXxTFdIGFI+o5l8c2aJ2L5StIRn9Uv8HKR76p7QP4ZUL26wzpWUCWh08xWUdkL2kocl+Xhv6VUu0rA1npVg==",
+      "path": "htmlagilitypack/1.11.72",
+      "hashPath": "htmlagilitypack.1.11.72.nupkg.sha512"
     },
     "Microsoft.AspNetCore.OpenApi/9.0.0": {
       "type": "package",
@@ -293,6 +314,20 @@
       "sha512": "sha512-veUa6xE+8ThjNLBCM75ZOOE0y72UNB/OQMsodOy+hTajZKV8So7s0dwx8x0kMqjgaiLMxC2grKGdQ+CVBl98sA==",
       "path": "openai/1.7.2",
       "hashPath": "openai.1.7.2.nupkg.sha512"
+    },
+    "Selenium.Support/4.27.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-vPsJmYP+ONxutAmkpSc2cXJCO/eHjP+4dccx/M9mGntOZuVjM0DOzyH2cvX8tDoQ18yUq8l2P4rA3a278Gp2KQ==",
+      "path": "selenium.support/4.27.0",
+      "hashPath": "selenium.support.4.27.0.nupkg.sha512"
+    },
+    "Selenium.WebDriver/4.27.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-bMIpqwpBfYLa1lh8gPVa6A1i9LeWNsfc2mR9why0DutEKI7ck3GVxzco1bB/8bv+7IA6rk4sR9WpZLRUnH/AAw==",
+      "path": "selenium.webdriver/4.27.0",
+      "hashPath": "selenium.webdriver.4.27.0.nupkg.sha512"
     },
     "Swashbuckle.AspNetCore/6.5.0": {
       "type": "package",

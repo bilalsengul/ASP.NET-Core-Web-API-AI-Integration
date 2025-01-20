@@ -51,15 +51,16 @@ builder.Services.AddMemoryCache();
 // Register HttpClient
 builder.Services.AddHttpClient();
 
-// Register ProductService
+// Register services
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IProductCrawlerService, ProductCrawlerService>();
 
 // Add CORS configuration
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(builder =>
     {
-        builder.WithOrigins("http://localhost:5173")
+        builder.AllowAnyOrigin()
                .AllowAnyMethod()
                .AllowAnyHeader()
                .WithExposedHeaders("X-API-Key");

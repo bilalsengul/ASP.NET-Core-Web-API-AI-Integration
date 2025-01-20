@@ -51,7 +51,7 @@
             },
             "HtmlAgilityPack": {
               "target": "Package",
-              "version": "[1.11.54, )"
+              "version": "[1.11.72, )"
             },
             "Microsoft.AspNetCore.OpenApi": {
               "target": "Package",
@@ -60,6 +60,14 @@
             "OpenAI": {
               "target": "Package",
               "version": "[1.7.2, )"
+            },
+            "Selenium.Support": {
+              "target": "Package",
+              "version": "[4.27.0, )"
+            },
+            "Selenium.WebDriver": {
+              "target": "Package",
+              "version": "[4.27.0, )"
             },
             "Swashbuckle.AspNetCore": {
               "target": "Package",

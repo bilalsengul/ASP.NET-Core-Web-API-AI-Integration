@@ -13,6 +13,7 @@ namespace TrendyolProductAPI.Controllers
     {
         private readonly IProductService _productService;
         private readonly ILogger<ProductsController> _logger;
+        public required string Url { get; set; }
 
         public ProductsController(IProductService productService, ILogger<ProductsController> logger)
         {
@@ -73,7 +74,7 @@ namespace TrendyolProductAPI.Controllers
             }
         }
 
-        [HttpPost]
+        [HttpPost("save")]
         public async Task<IActionResult> SaveProduct([FromBody] Product product)
         {
             try
@@ -90,7 +91,7 @@ namespace TrendyolProductAPI.Controllers
 
         public class CrawlRequest
         {
-            public string Url { get; set; }
+            public required string Url { get; set; }
         }
 
         [HttpPost("crawl")]

@@ -22,7 +22,6 @@ import {
   Breadcrumbs,
   Link
 } from '@mui/material';
-import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import SaveIcon from '@mui/icons-material/Save';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import FavoriteIcon from '@mui/icons-material/Favorite';
@@ -307,15 +306,6 @@ const ProductDetail: React.FC = () => {
             )}
 
             <Stack direction="row" spacing={2}>
-              <Button
-                variant="contained"
-                startIcon={<ShoppingBagIcon />}
-                fullWidth
-                size="large"
-                onClick={() => {/* Handle add to cart */}}
-              >
-                Add to Cart
-              </Button>
               <Button
                 variant="outlined"
                 startIcon={<SaveIcon />}
