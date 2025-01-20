@@ -211,3 +211,19 @@ The application includes comprehensive error handling for:
 ## License
 
 This project is licensed under the MIT License.
+
+## API Keys
+
+The application requires two API keys to function:
+
+1. Application API Key: Used for authenticating requests between the frontend and backend
+   - Set this in `TrendyolProductAPI/appsettings.json` as `ApiKey`
+   - Set the same key in `frontend/src/services/api.ts` as `API_KEY`
+
+2. OpenAI API Key: Used for AI-powered product transformations
+   - Set this in `TrendyolProductAPI/appsettings.json` under `OpenAI:ApiKey`
+
+For security:
+- Never commit real API keys to version control
+- Use the sample configuration file (`appsettings.sample.json`) as a template
+- Keep your API keys secure and rotate them regularly
